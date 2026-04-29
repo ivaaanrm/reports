@@ -1,6 +1,7 @@
 import mistune
+from mistune.plugins.table import table
 
-_md = mistune.Markdown(renderer=None)
+_md = mistune.Markdown(renderer=None, plugins=[table])
 
 
 def parse(text: str) -> list[dict]:

@@ -20,15 +20,15 @@ export default function FileUpload({ onFileSelect, selectedFile }: Props) {
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-gray-700">Markdown File</h2>
+      <h2 className="mb-2 text-sm font-semibold text-slate-700">Markdown File</h2>
       <div
-        className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 transition-colors hover:border-blue-400 hover:bg-blue-50"
+        className="cursor-pointer rounded-[28px] border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500 transition-colors hover:border-sky-400 hover:bg-sky-50"
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
       >
         {selectedFile ? (
-          <span className="font-medium text-blue-600">{selectedFile.name}</span>
+          <span className="font-medium text-sky-700">{selectedFile.name}</span>
         ) : (
           'Drag & drop a .md file or click to browse'
         )}

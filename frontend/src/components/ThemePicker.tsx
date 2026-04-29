@@ -19,23 +19,23 @@ export default function ThemePicker({ selectedSlug, onSelect }: Props) {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <p className="text-sm text-gray-400">Loading themes…</p>
+  if (loading) return <p className="text-sm text-slate-400">Loading templates…</p>
   if (error) return <p className="text-sm text-red-500">{error}</p>
   if (!themes.length)
-    return <p className="text-sm text-gray-400">No themes yet. Create one via the API.</p>
+    return <p className="text-sm text-slate-400">No templates yet. Create one in Template Studio.</p>
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-gray-700">Theme</h2>
+      <h2 className="mb-2 text-sm font-semibold text-slate-700">Template</h2>
       <div className="flex flex-col gap-2">
         {themes.map((theme) => (
           <button
             key={theme.slug}
             onClick={() => onSelect(theme.slug)}
-            className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+            className={`rounded-2xl border px-4 py-3 text-left text-sm transition-colors ${
               selectedSlug === theme.slug
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                ? 'border-sky-500 bg-sky-50 text-sky-800'
+                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -45,11 +45,16 @@ export default function ThemePicker({ selectedSlug, onSelect }: Props) {
               />
               <span className="font-medium">{theme.name}</span>
               {theme.is_default && (
-                <span className="ml-auto text-xs text-gray-400">default</span>
+                <span className="ml-auto text-xs text-slate-400">default</span>
               )}
             </div>
+            {theme.company_name && (
+              <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+                {theme.company_name}
+              </p>
+            )}
             {theme.description && (
-              <p className="mt-0.5 text-xs text-gray-500">{theme.description}</p>
+              <p className="mt-0.5 text-xs text-slate-500">{theme.description}</p>
             )}
           </button>
         ))}

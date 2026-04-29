@@ -1,11 +1,15 @@
+import base64
+import binascii
 from io import BytesIO
-from reportlab.lib.pagesizes import A4, LETTER
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import ParagraphStyle
+
 from reportlab.lib import colors
-from app.models.theme import Theme
-from app.pdf.parser import parse
+from reportlab.lib.pagesizes import A4, LETTER
+from reportlab.lib.utils import ImageReader
+from reportlab.platypus import Paragraph, SimpleDocTemplate
+
+from app.models.theme import HeaderFooterSettings, Theme
 from app.pdf.elements import build_flowables, build_styles
+from app.pdf.parser import parse
 
 PAGE_SIZES = {"A4": A4, "LETTER": LETTER}
 
@@ -14,31 +18,143 @@ class RenderError(Exception):
     pass
 
 
-def _make_header_footer(theme: Theme, styles: dict):
+def _load_logo(theme: Theme) -> tuple[ImageReader, float, float] | None:
+    if theme.logo is None or not theme.logo.data.startswith("data:"):
+        return None
+
+    try:
+        header, encoded = theme.logo.data.split(",", 1)
+        if ";base64" not in header:
+            return None
+
+        image_bytes = base64.b64decode(encoded)
+        reader = ImageReader(BytesIO(image_bytes))
+        width, height = reader.getSize()
+        target_width = max(24.0, min(theme.logo.width, 180.0))
+        target_height = target_width * (height / width)
+        return reader, target_width, target_height
+    except (ValueError, binascii.Error):
+        return None
+
+
+def _region_text(region: HeaderFooterSettings, theme: Theme) -> str | None:
+    text = region.text or theme.company_name
+    return text.strip() if text else None
+
+
+def _draw_region(
+    canvas,
+    doc,
+    *,
+    theme: Theme,
+    region: HeaderFooterSettings,
+    position: str,
+    primary: colors.Color,
+    secondary: colors.Color,
+    logo: tuple[ImageReader, float, float] | None,
+) -> None:
+    if not region.enabled:
+        return
+
+    left = theme.margin_left
+    right = doc.pagesize[0] - theme.margin_right
+    font_name = theme.font_family
+    font_size = 9
+    text = _region_text(region, theme)
+    logo_payload = logo if region.show_logo else None
+
+    if position == "header":
+        center_y = doc.pagesize[1] - theme.margin_top / 2
+        line_y = doc.pagesize[1] - theme.margin_top + 10
+    else:
+        center_y = max(theme.margin_bottom / 2 - 4, 18)
+        line_y = theme.margin_bottom - 10
+
+    if region.divider:
+        canvas.setStrokeColor(primary)
+        canvas.setLineWidth(0.5)
+        canvas.line(left, line_y, right, line_y)
+
+    if not text and not logo_payload:
+        return
+
+    canvas.setFont(font_name, font_size)
+    canvas.setFillColor(secondary)
+
+    text_width = canvas.stringWidth(text or "", font_name, font_size)
+    logo_width = logo_payload[1] if logo_payload else 0.0
+    logo_height = logo_payload[2] if logo_payload else 0.0
+    gap = 8.0 if logo_payload and text else 0.0
+
+    page_label = ""
+    reserved_right = right
+    if position == "footer" and region.show_page_numbers:
+        page_label = f"Page {doc.page}"
+        page_width = canvas.stringWidth(page_label, font_name, font_size)
+        reserved_right = right - page_width - 20
+
+    group_width = logo_width + gap + text_width
+
+    if region.align == "center":
+        start_x = left + max((reserved_right - left - group_width) / 2, 0)
+    elif region.align == "right":
+        start_x = reserved_right - group_width
+    else:
+        start_x = left
+
+    if logo_payload:
+        reader, _, _ = logo_payload
+        canvas.drawImage(
+            reader,
+            start_x,
+            center_y - logo_height / 2,
+            width=logo_width,
+            height=logo_height,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
+
+    if text:
+        text_x = start_x + logo_width + gap
+        canvas.drawString(text_x, center_y - 3, text)
+
+    if page_label:
+        canvas.drawRightString(right, center_y - 3, page_label)
+
+
+def _make_header_footer(theme: Theme):
     primary = colors.HexColor(theme.primary_color)
     secondary = colors.HexColor(theme.secondary_color)
+    background = colors.HexColor(theme.background_color)
+    logo = _load_logo(theme)
 
     def on_page(canvas, doc):
         canvas.saveState()
-        w, h = doc.pagesize
+        width, height = doc.pagesize
 
-        if theme.show_header and theme.header_text:
-            canvas.setFont(theme.font_family, 9)
-            canvas.setFillColor(secondary)
-            canvas.drawString(theme.margin_left, h - theme.margin_top + 16, theme.header_text)
-            canvas.setStrokeColor(primary)
-            canvas.setLineWidth(0.5)
-            canvas.line(theme.margin_left, h - theme.margin_top + 10, w - theme.margin_right, h - theme.margin_top + 10)
+        canvas.setFillColor(background)
+        canvas.rect(0, 0, width, height, stroke=0, fill=1)
 
-        if theme.show_footer:
-            canvas.setStrokeColor(primary)
-            canvas.setLineWidth(0.5)
-            canvas.line(theme.margin_left, theme.margin_bottom - 10, w - theme.margin_right, theme.margin_bottom - 10)
-            if theme.show_page_numbers:
-                canvas.setFont(theme.font_family, 9)
-                canvas.setFillColor(secondary)
-                canvas.drawRightString(w - theme.margin_right, theme.margin_bottom - 22, f"Page {doc.page}")
-
+        _draw_region(
+            canvas,
+            doc,
+            theme=theme,
+            region=theme.header,
+            position="header",
+            primary=primary,
+            secondary=secondary,
+            logo=logo,
+        )
+        _draw_region(
+            canvas,
+            doc,
+            theme=theme,
+            region=theme.footer,
+            position="footer",
+            primary=primary,
+            secondary=secondary,
+            logo=logo,
+        )
         canvas.restoreState()
 
     return on_page
@@ -65,7 +181,7 @@ def render(markdown_text: str, theme: Theme) -> BytesIO:
         if not flowables:
             flowables = [Paragraph("(empty document)", styles["body"])]
 
-        on_page = _make_header_footer(theme, styles)
+        on_page = _make_header_footer(theme)
         doc.build(flowables, onFirstPage=on_page, onLaterPages=on_page)
 
         buffer.seek(0)

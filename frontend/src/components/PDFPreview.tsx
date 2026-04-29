@@ -45,8 +45,8 @@ export default function PDFPreview({ pdfUrl, loading }: Props) {
 
   if (!pdfUrl) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-gray-400">
-        Upload a .md file and choose a theme to preview the PDF automatically
+      <div className="flex h-full items-center justify-center text-sm text-slate-400">
+        Upload a .md file and choose a template to preview the PDF automatically
       </div>
     )
   }
