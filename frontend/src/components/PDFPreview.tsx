@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -17,10 +17,28 @@ export default function PDFPreview({ pdfUrl, loading }: Props) {
   const [numPages, setNumPages] = useState<number | null>(null)
   const [page, setPage] = useState(1)
 
+  useEffect(() => {
+    setNumPages(null)
+    setPage(1)
+  }, [pdfUrl])
+
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+      <div className="flex min-h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4 rounded-[28px] border border-slate-200 bg-white px-10 py-12 shadow-sm">
+          <div className="relative h-14 w-14">
+            <div className="absolute inset-0 rounded-full border border-slate-200" />
+            <div className="absolute inset-0 rounded-full border-4 border-sky-100" />
+            <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-r-blue-400 border-t-sky-500" />
+            <div className="absolute inset-3 rounded-full bg-gradient-to-br from-sky-50 to-white shadow-inner" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-slate-700">Building preview</p>
+            <p className="text-xs text-slate-400">
+              Rendering your PDF with the selected theme...
+            </p>
+          </div>
+        </div>
       </div>
     )
   }
@@ -28,7 +46,7 @@ export default function PDFPreview({ pdfUrl, loading }: Props) {
   if (!pdfUrl) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-gray-400">
-        Upload a .md file and select a theme to preview the PDF
+        Upload a .md file and choose a theme to preview the PDF automatically
       </div>
     )
   }

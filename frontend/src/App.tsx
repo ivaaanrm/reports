@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import FileUpload from './components/FileUpload'
 import ThemePicker from './components/ThemePicker'
 import PDFPreview from './components/PDFPreview'
@@ -10,35 +10,59 @@ export default function App() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const pdfUrlRef = useRef<string | null>(null)
 
-  async function handleGenerate() {
-    if (!markdownFile || !selectedThemeSlug) return
-    setLoading(true)
-    setError(null)
-    try {
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl)
-      const url = await generatePDF(markdownFile, selectedThemeSlug)
-      setPdfUrl(url)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Generation failed')
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    return () => {
+      if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current)
     }
+  }, [])
+
+  useEffect(() => {
+    if (pdfUrlRef.current) {
+      URL.revokeObjectURL(pdfUrlRef.current)
+      pdfUrlRef.current = null
+    }
+
+    setPdfUrl(null)
+    setError(null)
+
+    if (!markdownFile || !selectedThemeSlug) {
+      setLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+    setLoading(true)
+
+    void generatePDF(markdownFile, selectedThemeSlug, controller.signal)
+      .then((url) => {
+        pdfUrlRef.current = url
+        setPdfUrl(url)
+      })
+      .catch((e: unknown) => {
+        if (e instanceof DOMException && e.name === 'AbortError') return
+        setError(e instanceof Error ? e.message : 'Generation failed')
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [markdownFile, selectedThemeSlug])
+
+  function handleFileSelect(file: File | null) {
+    setMarkdownFile(file)
   }
 
   return (
     <div className="flex h-screen bg-gray-50">
       <aside className="flex w-80 flex-col gap-6 overflow-y-auto border-r bg-white p-6">
         <h1 className="text-xl font-bold text-gray-900">Reports</h1>
-        <FileUpload onFileSelect={setMarkdownFile} selectedFile={markdownFile} />
+        <FileUpload onFileSelect={handleFileSelect} selectedFile={markdownFile} />
         <ThemePicker selectedSlug={selectedThemeSlug} onSelect={setSelectedThemeSlug} />
-        <button
-          disabled={!markdownFile || !selectedThemeSlug || loading}
-          onClick={handleGenerate}
-          className="mt-auto rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {loading ? 'Generating…' : 'Generate PDF'}
-        </button>
       </aside>
       <main className="flex-1 overflow-y-auto p-6">
         {error && (

@@ -28,12 +28,16 @@ export async function deleteTheme(slug: string): Promise<void> {
   if (!res.ok) await handleError(res)
 }
 
-export async function generatePDF(file: File, themeSlug: string): Promise<string> {
+export async function generatePDF(
+  file: File,
+  themeSlug: string,
+  signal?: AbortSignal,
+): Promise<string> {
   const form = new FormData()
   form.append('file', file)
   form.append('theme_id', themeSlug)
 
-  const res = await fetch(`${BASE}/generate`, { method: 'POST', body: form })
+  const res = await fetch(`${BASE}/generate`, { method: 'POST', body: form, signal })
   if (!res.ok) await handleError(res)
 
   const blob = await res.blob()

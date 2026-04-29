@@ -19,5 +19,6 @@ dist/
 
 # MongoDB data
 mongo_data/
+generated-pdfs/
 
 .vscode
