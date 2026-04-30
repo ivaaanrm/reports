@@ -15,6 +15,170 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+
+def _hex_luminance(hex_color: str) -> float:
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+
+
+def _token_color(token_type, dark: bool) -> str:
+    from pygments.token import Comment, Keyword, Name, Number, Operator, Punctuation, String
+
+    rules_light = [
+        (Comment, "#6B7280"),
+        (Keyword.Type, "#0E7490"),
+        (Keyword, "#7C3AED"),
+        (String, "#16A34A"),
+        (Number, "#B45309"),
+        (Name.Decorator, "#D97706"),
+        (Name.Exception, "#DC2626"),
+        (Name.Function, "#1D4ED8"),
+        (Name.Builtin, "#0E7490"),
+        (Name.Class, "#0E7490"),
+        (Operator, "#374151"),
+        (Punctuation, "#374151"),
+    ]
+    rules_dark = [
+        (Comment, "#94A3B8"),
+        (Keyword.Type, "#67E8F9"),
+        (Keyword, "#C084FC"),
+        (String, "#86EFAC"),
+        (Number, "#FCA5A5"),
+        (Name.Decorator, "#FDE68A"),
+        (Name.Exception, "#FCA5A5"),
+        (Name.Function, "#93C5FD"),
+        (Name.Builtin, "#67E8F9"),
+        (Name.Class, "#67E8F9"),
+        (Operator, "#CBD5E1"),
+        (Punctuation, "#CBD5E1"),
+    ]
+    default = "#E2E8F0" if dark else "#0F172A"
+    for base, color in (rules_dark if dark else rules_light):
+        if token_type is base or token_type in base:
+            return color
+    return default
+
+
+class TaskBullet(Flowable):
+    """Draws a circle checkbox icon: filled+tick when checked, outline when not."""
+
+    def __init__(self, checked: bool, size: float, primary_color: str):
+        super().__init__()
+        self.checked = checked
+        self._size = size
+        self._primary = primary_color
+        self.width = size
+        self.height = size
+
+    def draw(self):
+        c = self.canv
+        r = self._size / 2
+        cx, cy = r, r
+        if self.checked:
+            c.setFillColor(colors.HexColor(self._primary))
+            c.setStrokeColor(colors.HexColor(self._primary))
+            c.circle(cx, cy, r, fill=1, stroke=0)
+            c.setStrokeColor(colors.white)
+            c.setLineWidth(max(r * 0.2, 0.7))
+            c.setLineCap(1)
+            # checkmark: short leg then long leg
+            c.line(cx - r * 0.38, cy - r * 0.05, cx - r * 0.05, cy - r * 0.38)
+            c.line(cx - r * 0.05, cy - r * 0.38, cx + r * 0.42, cy + r * 0.32)
+        else:
+            c.setFillColor(colors.white)
+            c.setStrokeColor(colors.HexColor(self._primary))
+            c.setLineWidth(max(r * 0.18, 0.6))
+            c.circle(cx, cy, r, fill=1, stroke=1)
+
+
+class HighlightedCode(Flowable):
+    """Renders a syntax-highlighted code block using pygments token colors."""
+
+    def __init__(
+        self,
+        code: str,
+        language: str | None,
+        font_name: str,
+        font_size: float,
+        text_color: str,
+        bg_color: str,
+        border_color: str,
+        border_width: float,
+        padding: float,
+    ):
+        super().__init__()
+        self._code = code.expandtabs(4)
+        self._language = language
+        self._font_name = font_name
+        self._font_size = font_size
+        self._text_color = text_color
+        self._bg_color = bg_color
+        self._border_color = border_color
+        self._border_width = border_width
+        self._padding = padding
+        self._dark = _hex_luminance(bg_color) < 0.5
+        self._line_height = font_size * 1.35
+        self._segments = self._build_segments()
+
+    def _build_segments(self) -> list[list[tuple[str, str]]]:
+        """Return a list of lines; each line is a list of (color, text) pairs."""
+        try:
+            from pygments import lex
+            from pygments.lexers import TextLexer, get_lexer_by_name
+            from pygments.util import ClassNotFound
+
+            try:
+                lexer = get_lexer_by_name(
+                    self._language or "text", stripnl=False, ensurenl=True
+                )
+            except ClassNotFound:
+                lexer = TextLexer()
+
+            lines: list[list[tuple[str, str]]] = []
+            current: list[tuple[str, str]] = []
+            for ttype, value in lex(self._code, lexer):
+                color = _token_color(ttype, self._dark)
+                parts = value.split("\n")
+                for i, part in enumerate(parts):
+                    if part:
+                        current.append((color, part))
+                    if i < len(parts) - 1:
+                        lines.append(current)
+                        current = []
+            if current:
+                lines.append(current)
+            return lines
+        except Exception:
+            raw_lines = self._code.rstrip("\n").split("\n")
+            return [[(self._text_color, line)] for line in raw_lines]
+
+    def wrap(self, availWidth, availHeight):
+        self.width = max(availWidth, 1)
+        self.height = len(self._segments) * self._line_height + 2 * self._padding
+        return self.width, self.height
+
+    def draw(self):
+        c = self.canv
+        c.setFillColor(colors.HexColor(self._bg_color))
+        c.rect(0, 0, self.width, self.height, fill=1, stroke=0)
+        if self._border_width > 0:
+            c.setStrokeColor(colors.HexColor(self._border_color))
+            c.setLineWidth(self._border_width)
+            c.rect(0, 0, self.width, self.height, fill=0, stroke=1)
+
+        x = self._padding
+        y = self.height - self._padding - self._font_size
+        c.setFont(self._font_name, self._font_size)
+        for line_segs in self._segments:
+            curr_x = x
+            for color, text in line_segs:
+                if text:
+                    c.setFillColor(colors.HexColor(color))
+                    c.drawString(curr_x, y, text)
+                    curr_x += c.stringWidth(text, self._font_name, self._font_size)
+            y -= self._line_height
+
 from app.models.theme import Theme
 
 FONT_VARIANTS = {
@@ -123,22 +287,7 @@ def _base_preset(theme: Theme) -> dict:
 def _preset_defaults(theme: Theme) -> dict:
     preset = _base_preset(theme)
 
-    if theme.markdown_preset == "executive":
-        preset["body"]["space_after"] = 8.0
-        preset["lists"]["item_spacing"] = 5.0
-        preset["blockquotes"]["padding"] = 10.0
-        preset["code"]["padding"] = 10.0
-        preset["tables"]["cell_padding"] = 8.0
-        preset["headings"]["h1"]["space_before"] = 14.0
-        preset["headings"]["h2"]["space_before"] = 12.0
-    elif theme.markdown_preset == "minimal":
-        preset["blockquotes"]["background_color"] = "#FFFFFF"
-        preset["code"]["background_color"] = "#FFFFFF"
-        preset["tables"]["header_background_color"] = theme.palette.surface_color
-        preset["tables"]["header_text_color"] = theme.palette.primary_color
-        preset["tables"]["alternate_row_background_color"] = "#FFFFFF"
-        preset["horizontal_rules"]["thickness"] = 0.5
-    elif theme.markdown_preset == "smooth":
+    if theme.markdown_preset == "default-light":
         preset["body"]["space_after"] = 10.0
         preset["lists"]["item_spacing"] = 6.0
         preset["lists"]["left_indent"] = 20.0
@@ -155,6 +304,89 @@ def _preset_defaults(theme: Theme) -> dict:
         preset["horizontal_rules"]["spacing_after"] = 10.0
         preset["tables"]["cell_padding"] = 8.0
         preset["tables"]["panel"] = True
+        preset["headings"]["h1"]["space_before"] = 0.0
+        preset["headings"]["h1"]["space_after"] = 12.0
+        preset["headings"]["h2"]["space_before"] = 16.0
+        preset["headings"]["h2"]["space_after"] = 8.0
+        preset["headings"]["h3"]["space_before"] = 12.0
+        preset["headings"]["h3"]["space_after"] = 6.0
+    elif theme.markdown_preset == "default-dark":
+        preset["body"]["space_after"] = 10.0
+        preset["lists"]["item_spacing"] = 6.0
+        preset["lists"]["left_indent"] = 20.0
+        preset["blockquotes"]["padding"] = 12.0
+        preset["blockquotes"]["left_indent"] = 0.0
+        preset["blockquotes"]["border_color"] = theme.palette.muted_color
+        preset["blockquotes"]["accent_color"] = theme.palette.accent_color
+        preset["blockquotes"]["panel"] = True
+        preset["code"]["text_color"] = "#E2E8F0"
+        preset["code"]["background_color"] = theme.palette.surface_color
+        preset["code"]["border_color"] = theme.palette.muted_color
+        preset["code"]["padding"] = 12.0
+        preset["code"]["panel"] = True
+        preset["horizontal_rules"]["color"] = theme.palette.muted_color
+        preset["horizontal_rules"]["thickness"] = 0.5
+        preset["horizontal_rules"]["spacing_before"] = 10.0
+        preset["horizontal_rules"]["spacing_after"] = 10.0
+        preset["tables"]["header_background_color"] = "#13263C"
+        preset["tables"]["header_text_color"] = "#F8FAFC"
+        preset["tables"]["row_background_color"] = "#13263C"
+        preset["tables"]["alternate_row_background_color"] = theme.palette.surface_color
+        preset["tables"]["border_color"] = theme.palette.muted_color
+        preset["tables"]["cell_padding"] = 8.0
+        preset["tables"]["panel"] = True
+        preset["tables"]["panel_background_color"] = theme.palette.surface_color
+        preset["headings"]["h1"]["space_before"] = 0.0
+        preset["headings"]["h1"]["space_after"] = 12.0
+        preset["headings"]["h2"]["space_before"] = 16.0
+        preset["headings"]["h2"]["space_after"] = 8.0
+        preset["headings"]["h3"]["space_before"] = 12.0
+        preset["headings"]["h3"]["space_after"] = 6.0
+    elif theme.markdown_preset == "modern-corporate":
+        preset["body"]["space_after"] = 8.0
+        preset["lists"]["item_spacing"] = 5.0
+        preset["lists"]["left_indent"] = 18.0
+        preset["blockquotes"]["background_color"] = "#FFFFFF"
+        preset["blockquotes"]["border_color"] = theme.palette.primary_color
+        preset["blockquotes"]["accent_color"] = theme.palette.primary_color
+        preset["blockquotes"]["padding"] = 10.0
+        preset["blockquotes"]["left_indent"] = 0.0
+        preset["blockquotes"]["panel"] = True
+        preset["code"]["background_color"] = "#FFFFFF"
+        preset["code"]["border_color"] = theme.palette.muted_color
+        preset["code"]["padding"] = 10.0
+        preset["tables"]["cell_padding"] = 8.0
+        preset["tables"]["header_background_color"] = theme.palette.primary_color
+        preset["tables"]["header_text_color"] = "#FFFFFF"
+        preset["tables"]["row_background_color"] = "#FFFFFF"
+        preset["tables"]["alternate_row_background_color"] = "#F8FBFD"
+        preset["tables"]["border_color"] = theme.palette.muted_color
+        preset["headings"]["h1"]["space_before"] = 14.0
+        preset["headings"]["h2"]["space_before"] = 12.0
+    elif theme.markdown_preset == "creative-studio":
+        preset["body"]["space_after"] = 10.0
+        preset["lists"]["item_spacing"] = 6.0
+        preset["lists"]["left_indent"] = 20.0
+        preset["blockquotes"]["background_color"] = theme.palette.surface_color
+        preset["blockquotes"]["border_color"] = theme.palette.accent_color
+        preset["blockquotes"]["accent_color"] = theme.palette.accent_color
+        preset["blockquotes"]["padding"] = 12.0
+        preset["blockquotes"]["left_indent"] = 0.0
+        preset["blockquotes"]["panel"] = True
+        preset["code"]["background_color"] = "#FFFDFB"
+        preset["code"]["border_color"] = theme.palette.muted_color
+        preset["code"]["padding"] = 12.0
+        preset["code"]["panel"] = True
+        preset["tables"]["header_background_color"] = theme.palette.primary_color
+        preset["tables"]["header_text_color"] = "#FFFFFF"
+        preset["tables"]["row_background_color"] = "#FFFDFB"
+        preset["tables"]["alternate_row_background_color"] = theme.palette.surface_color
+        preset["tables"]["border_color"] = theme.palette.muted_color
+        preset["tables"]["cell_padding"] = 8.0
+        preset["tables"]["panel"] = True
+        preset["horizontal_rules"]["thickness"] = 0.5
+        preset["horizontal_rules"]["spacing_before"] = 10.0
+        preset["horizontal_rules"]["spacing_after"] = 10.0
         preset["headings"]["h1"]["space_before"] = 0.0
         preset["headings"]["h1"]["space_after"] = 12.0
         preset["headings"]["h2"]["space_before"] = 16.0
@@ -383,17 +615,55 @@ def _list_item_flowables(item: dict, styles: dict, meta: dict) -> list[Flowable]
     return flowables
 
 
-def _build_list_flowable(token: dict, styles: dict, meta: dict) -> ListFlowable | None:
-    items: list[ListItem] = []
+def _build_list_flowable(token: dict, styles: dict, meta: dict) -> Flowable | None:
+    children = token.get("children") or []
     ordered = bool(token.get("attrs", {}).get("ordered"))
+    is_task_list = any(c.get("type") == "task_list_item" for c in children)
 
-    for index, item in enumerate(token.get("children") or [], start=1):
+    if is_task_list:
+        rows: list[list] = []
+        bullet_size = styles["list"].fontSize * 0.82
+        for item in children:
+            content = _list_item_flowables(item, styles, meta)
+            if not content:
+                continue
+            checked = (item.get("attrs") or {}).get("checked", False)
+            bullet = TaskBullet(
+                checked=checked,
+                size=bullet_size,
+                primary_color=meta["lists"]["bullet_color"],
+            )
+            rows.append([bullet, content[0] if len(content) == 1 else content])
+
+        if not rows:
+            return None
+
+        left_indent = meta["lists"]["left_indent"]
+        left_pad = max((left_indent - bullet_size) / 2, 2.0)
+        task_table = Table(rows, colWidths=[left_indent, None], hAlign="LEFT")
+        task_table.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (0, -1), left_pad),
+                    ("RIGHTPADDING", (0, 0), (0, -1), 0),
+                    ("LEFTPADDING", (1, 0), (1, -1), 4),
+                    ("RIGHTPADDING", (1, 0), (1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                ]
+            )
+        )
+        return task_table
+
+    items: list[ListItem] = []
+    for index, item in enumerate(children, start=1):
         content = _list_item_flowables(item, styles, meta)
         if not content:
             continue
 
         item_content: Flowable | list[Flowable] = content[0] if len(content) == 1 else content
-        kwargs = {"bulletColor": colors.HexColor(meta["lists"]["bullet_color"])}
+        kwargs: dict = {"bulletColor": colors.HexColor(meta["lists"]["bullet_color"])}
         if ordered:
             kwargs["value"] = index
         items.append(ListItem(item_content, **kwargs))
@@ -443,18 +713,33 @@ def _table_rows(
 
 
 def _build_code_flowables(token: dict, styles: dict, meta: dict) -> list[Flowable]:
-    code_block = Preformatted(token.get("raw", "").rstrip(), styles["code"])
-    if meta["code"].get("panel"):
+    code_meta = meta["code"]
+    code_style = styles["code"]
+    language = (token.get("attrs") or {}).get("info") or None
+    raw = token.get("raw", "").rstrip("\n")
+
+    code_block = HighlightedCode(
+        code=raw,
+        language=language,
+        font_name=code_style.fontName,
+        font_size=code_style.fontSize,
+        text_color=code_meta["text_color"],
+        bg_color=code_meta["background_color"],
+        border_color=code_meta["border_color"],
+        border_width=0 if code_meta.get("panel") else 0.75,
+        padding=code_meta["padding"],
+    )
+    if code_meta.get("panel"):
         return [
             _panel(
                 code_block,
-                background_color=meta["code"]["background_color"],
-                border_color=meta["code"]["border_color"],
-                padding=meta["code"]["padding"],
+                background_color=code_meta["background_color"],
+                border_color=code_meta["border_color"],
+                padding=code_meta["padding"],
             ),
             Spacer(1, styles["body"].spaceAfter),
         ]
-    return [code_block]
+    return [code_block, Spacer(1, styles["body"].spaceAfter)]
 
 
 def _build_blockquote_flowables(token: dict, styles: dict, meta: dict) -> list[Flowable]:

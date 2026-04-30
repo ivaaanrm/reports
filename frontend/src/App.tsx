@@ -155,7 +155,7 @@ export default function App() {
               )}
 
               {!loading && !pdfUrl && !error && (
-                <div className="flex flex-col items-center gap-4 py-24 text-center">
+                <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-300 shadow-sm">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />

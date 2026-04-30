@@ -17,7 +17,7 @@ class ThemeCreate(BaseModel):
     company_name: str = ""
     logo: LogoAsset | None = None
     palette: PaletteSettings = Field(default_factory=PaletteSettings)
-    markdown_preset: str = "enterprise"
+    markdown_preset: str = "default-light"
     advanced: AdvancedTemplateSettings = Field(default_factory=AdvancedTemplateSettings)
 
 

@@ -19,66 +19,215 @@ import type {
 
 type TemplateDraft = Omit<Theme, 'id' | 'created_at' | 'updated_at'>
 
-type PalettePreset = {
-  id: string
+type StylePreset = {
+  id: MarkdownPreset
   name: string
   description: string
   palette: PaletteSettings
+  company_name: string
+  template_name: string
+  template_slug: string
+  template_description: string
+  is_default: boolean
+  typography: AdvancedTemplateSettings['typography']
+  layout: AdvancedTemplateSettings['layout']
+  header: HeaderFooterSettings
+  footer: HeaderFooterSettings
 }
 
 const fontOptions = ['Helvetica', 'Times-Roman', 'Courier']
 const alignOptions: Alignment[] = ['left', 'center', 'right']
-const palettePresets: PalettePreset[] = [
+const stylePresets: StylePreset[] = [
   {
-    id: 'corporate-blue',
-    name: 'Corporate Blue',
-    description: 'Calm, credible, and boardroom-ready.',
+    id: 'default-light',
+    name: 'Default Light',
+    description: 'The standard light report style with soft panels and calm spacing.',
     palette: {
-      primary_color: '#12355B',
-      secondary_color: '#475569',
-      accent_color: '#0F766E',
-      background_color: '#F5F7FB',
-      surface_color: '#ECF2F8',
-      muted_color: '#CBD5E1',
+      primary_color: '#173B63',
+      secondary_color: '#4B5B6A',
+      accent_color: '#1E847F',
+      background_color: '#F6F8FC',
+      surface_color: '#EAF0F6',
+      muted_color: '#C9D5E3',
+    },
+    company_name: 'Northwind Advisory',
+    template_name: 'Default Light',
+    template_slug: 'default-light',
+    template_description: 'The standard light report style with soft surfaces and calm rhythm.',
+    is_default: true,
+    typography: {
+      font_family: 'Helvetica',
+      font_size_body: 11,
+      font_size_heading: 22,
+      line_spacing: 1.42,
+    },
+    layout: {
+      page_size: 'A4',
+      margin_top: 82,
+      margin_bottom: 72,
+      margin_left: 72,
+      margin_right: 72,
+      columns: 1,
+    },
+    header: {
+      enabled: true,
+      text: 'Default Light',
+      align: 'left',
+      show_logo: false,
+      divider: false,
+      show_page_numbers: false,
+    },
+    footer: {
+      enabled: true,
+      text: 'Northwind Advisory',
+      align: 'right',
+      show_logo: false,
+      divider: false,
+      show_page_numbers: true,
     },
   },
   {
-    id: 'forest-ledger',
-    name: 'Forest Ledger',
-    description: 'Grounded green tones for operations and finance reports.',
+    id: 'default-dark',
+    name: 'Default Dark',
+    description: 'The standard dark report style with high contrast and smooth blocks.',
     palette: {
-      primary_color: '#1F4D3D',
-      secondary_color: '#40534C',
-      accent_color: '#C66A2B',
-      background_color: '#F6F7F2',
-      surface_color: '#E6EEE4',
-      muted_color: '#C7D5CA',
+      primary_color: '#E6EEF8',
+      secondary_color: '#B8C7D9',
+      accent_color: '#4FD1C5',
+      background_color: '#0F1724',
+      surface_color: '#162131',
+      muted_color: '#2E415A',
+    },
+    company_name: 'Northwind Advisory',
+    template_name: 'Default Dark',
+    template_slug: 'default-dark',
+    template_description: 'The standard dark report style with high contrast and smooth panels.',
+    is_default: false,
+    typography: {
+      font_family: 'Helvetica',
+      font_size_body: 11,
+      font_size_heading: 22,
+      line_spacing: 1.42,
+    },
+    layout: {
+      page_size: 'A4',
+      margin_top: 82,
+      margin_bottom: 72,
+      margin_left: 72,
+      margin_right: 72,
+      columns: 1,
+    },
+    header: {
+      enabled: true,
+      text: 'Default Dark',
+      align: 'left',
+      show_logo: false,
+      divider: false,
+      show_page_numbers: false,
+    },
+    footer: {
+      enabled: true,
+      text: 'Northwind Advisory',
+      align: 'right',
+      show_logo: false,
+      divider: false,
+      show_page_numbers: true,
     },
   },
   {
-    id: 'warm-editorial',
-    name: 'Warm Editorial',
-    description: 'A softer executive palette with warmer highlights.',
+    id: 'modern-corporate',
+    name: 'Modern Corporate',
+    description: 'Sharper hierarchy, restrained surfaces, and a polished business tone.',
     palette: {
-      primary_color: '#8F3D1E',
-      secondary_color: '#4B423D',
-      accent_color: '#C07A3C',
-      background_color: '#FFF9F5',
-      surface_color: '#F7E8DB',
-      muted_color: '#E7CBB2',
+      primary_color: '#0F2942',
+      secondary_color: '#4A5A67',
+      accent_color: '#2E6A8E',
+      background_color: '#F3F6F9',
+      surface_color: '#FFFFFF',
+      muted_color: '#D6E0E8',
+    },
+    company_name: 'Atlas Strategy Group',
+    template_name: 'Modern Corporate',
+    template_slug: 'modern-corporate',
+    template_description: 'A sharper corporate style with crisp hierarchy and restrained surfaces.',
+    is_default: false,
+    typography: {
+      font_family: 'Helvetica',
+      font_size_body: 11,
+      font_size_heading: 22,
+      line_spacing: 1.34,
+    },
+    layout: {
+      page_size: 'A4',
+      margin_top: 78,
+      margin_bottom: 68,
+      margin_left: 72,
+      margin_right: 72,
+      columns: 1,
+    },
+    header: {
+      enabled: true,
+      text: 'Modern Corporate',
+      align: 'left',
+      show_logo: false,
+      divider: false,
+      show_page_numbers: false,
+    },
+    footer: {
+      enabled: true,
+      text: 'Atlas Strategy Group',
+      align: 'right',
+      show_logo: false,
+      divider: true,
+      show_page_numbers: true,
     },
   },
   {
-    id: 'slate-minimal',
-    name: 'Slate Minimal',
-    description: 'Quiet monochrome palette for restrained documents.',
+    id: 'creative-studio',
+    name: 'Creative Studio',
+    description: 'Warmer contrast, bolder callouts, and a more expressive layout feel.',
     palette: {
-      primary_color: '#1E293B',
-      secondary_color: '#475569',
-      accent_color: '#0284C7',
-      background_color: '#F8FAFC',
-      surface_color: '#EAEFF5',
-      muted_color: '#CBD5E1',
+      primary_color: '#6B2C91',
+      secondary_color: '#4F435B',
+      accent_color: '#F97360',
+      background_color: '#FFF8F4',
+      surface_color: '#F8E7DE',
+      muted_color: '#E8C9BC',
+    },
+    company_name: 'Lumen Creative Lab',
+    template_name: 'Creative Studio',
+    template_slug: 'creative-studio',
+    template_description: 'A more expressive preset with warmer contrast and bolder feature blocks.',
+    is_default: false,
+    typography: {
+      font_family: 'Helvetica',
+      font_size_body: 11,
+      font_size_heading: 24,
+      line_spacing: 1.48,
+    },
+    layout: {
+      page_size: 'A4',
+      margin_top: 86,
+      margin_bottom: 72,
+      margin_left: 72,
+      margin_right: 72,
+      columns: 1,
+    },
+    header: {
+      enabled: true,
+      text: 'Creative Studio',
+      align: 'left',
+      show_logo: false,
+      divider: false,
+      show_page_numbers: false,
+    },
+    footer: {
+      enabled: true,
+      text: 'Lumen Creative Lab',
+      align: 'right',
+      show_logo: false,
+      divider: false,
+      show_page_numbers: true,
     },
   },
 ]
@@ -158,26 +307,7 @@ function createPresetStyles(
     },
   }
 
-  if (preset === 'executive') {
-    base.body.space_after = 8
-    base.lists.item_spacing = 5
-    base.blockquotes.padding = 10
-    base.code.padding = 10
-    base.tables.cell_padding = 8
-    base.headings.h1.space_before = 14
-    base.headings.h2.space_before = 12
-  }
-
-  if (preset === 'minimal') {
-    base.blockquotes.background_color = '#FFFFFF'
-    base.code.background_color = '#FFFFFF'
-    base.tables.header_background_color = palette.surface_color
-    base.tables.header_text_color = palette.primary_color
-    base.tables.alternate_row_background_color = '#FFFFFF'
-    base.horizontal_rules.thickness = 0.5
-  }
-
-  if (preset === 'smooth') {
+  if (preset === 'default-light') {
     base.body.space_after = 10
     base.headings.h1.space_before = 0
     base.headings.h1.space_after = 12
@@ -205,54 +335,106 @@ function createPresetStyles(
     base.tables.cell_padding = 8
   }
 
+  if (preset === 'default-dark') {
+    base.body.space_after = 10
+    base.headings.h1.space_before = 0
+    base.headings.h1.space_after = 12
+    base.headings.h2.space_before = 16
+    base.headings.h2.space_after = 8
+    base.headings.h3.space_before = 12
+    base.headings.h3.space_after = 6
+    base.lists.item_spacing = 6
+    base.lists.left_indent = 20
+    base.blockquotes.border_color = palette.muted_color
+    base.blockquotes.background_color = palette.surface_color
+    base.blockquotes.left_indent = 0
+    base.blockquotes.padding = 12
+    base.code.text_color = '#E2E8F0'
+    base.code.background_color = palette.surface_color
+    base.code.border_color = palette.muted_color
+    base.code.padding = 12
+    base.horizontal_rules.color = palette.muted_color
+    base.horizontal_rules.thickness = 0.5
+    base.horizontal_rules.spacing_before = 10
+    base.horizontal_rules.spacing_after = 10
+    base.tables.header_background_color = '#13263C'
+    base.tables.header_text_color = '#F8FAFC'
+    base.tables.row_background_color = '#13263C'
+    base.tables.alternate_row_background_color = palette.surface_color
+    base.tables.border_color = palette.muted_color
+    base.tables.cell_padding = 8
+  }
+
+  if (preset === 'modern-corporate') {
+    base.body.space_after = 8
+    base.lists.item_spacing = 5
+    base.blockquotes.border_color = palette.primary_color
+    base.blockquotes.background_color = '#FFFFFF'
+    base.blockquotes.left_indent = 0
+    base.blockquotes.padding = 10
+    base.code.background_color = '#FFFFFF'
+    base.code.border_color = palette.muted_color
+    base.code.padding = 10
+    base.horizontal_rules.thickness = 0.5
+    base.tables.header_background_color = palette.primary_color
+    base.tables.header_text_color = '#FFFFFF'
+    base.tables.row_background_color = '#FFFFFF'
+    base.tables.alternate_row_background_color = '#F8FBFD'
+    base.tables.border_color = palette.muted_color
+    base.tables.cell_padding = 8
+    base.headings.h1.space_before = 14
+    base.headings.h2.space_before = 12
+  }
+
+  if (preset === 'creative-studio') {
+    base.body.space_after = 10
+    base.headings.h1.space_before = 0
+    base.headings.h1.space_after = 12
+    base.headings.h2.space_before = 16
+    base.headings.h2.space_after = 8
+    base.headings.h3.space_before = 12
+    base.headings.h3.space_after = 6
+    base.lists.item_spacing = 6
+    base.lists.left_indent = 20
+    base.blockquotes.border_color = palette.accent_color
+    base.blockquotes.background_color = palette.surface_color
+    base.blockquotes.left_indent = 0
+    base.blockquotes.padding = 12
+    base.code.background_color = '#FFFDFB'
+    base.code.border_color = palette.muted_color
+    base.code.padding = 12
+    base.horizontal_rules.thickness = 0.5
+    base.horizontal_rules.spacing_before = 10
+    base.horizontal_rules.spacing_after = 10
+    base.tables.header_background_color = palette.primary_color
+    base.tables.header_text_color = '#FFFFFF'
+    base.tables.row_background_color = '#FFFDFB'
+    base.tables.alternate_row_background_color = palette.surface_color
+    base.tables.border_color = palette.muted_color
+    base.tables.cell_padding = 8
+  }
+
   return base
 }
 
-function createInitialDraft(): TemplateDraft {
-  const palette = palettePresets[0].palette
+function createDraftFromPreset(preset: StylePreset): TemplateDraft {
   const advanced: AdvancedTemplateSettings = {
-    typography: {
-      font_family: 'Helvetica',
-      font_size_body: 11,
-      font_size_heading: 22,
-      line_spacing: 1.35,
-    },
-    layout: {
-      page_size: 'A4',
-      margin_top: 82,
-      margin_bottom: 72,
-      margin_left: 72,
-      margin_right: 72,
-      columns: 1,
-    },
-    header: {
-      enabled: true,
-      text: 'Confidential',
-      align: 'left',
-      show_logo: true,
-      divider: true,
-      show_page_numbers: false,
-    },
-    footer: {
-      enabled: true,
-      text: 'Internal Use Only',
-      align: 'left',
-      show_logo: false,
-      divider: true,
-      show_page_numbers: true,
-    },
+    typography: preset.typography,
+    layout: preset.layout,
+    header: preset.header,
+    footer: preset.footer,
     markdown_styles: {} as MarkdownStyles,
   }
 
   const draft: TemplateDraft = {
-    name: 'Enterprise Template',
-    slug: 'enterprise-template',
-    description: 'Shared company template with reusable branding and report formatting.',
-    is_default: false,
-    company_name: 'Acme Corporation',
+    name: preset.template_name,
+    slug: preset.template_slug,
+    description: preset.template_description,
+    is_default: preset.is_default,
+    company_name: preset.company_name,
     logo: null,
-    palette,
-    markdown_preset: 'enterprise',
+    palette: preset.palette,
+    markdown_preset: preset.id,
     advanced,
   }
 
@@ -262,6 +444,10 @@ function createInitialDraft(): TemplateDraft {
     draft.advanced,
   )
   return draft
+}
+
+function createInitialDraft(): TemplateDraft {
+  return createDraftFromPreset(stylePresets[0])
 }
 
 function slugify(value: string): string {
@@ -512,16 +698,6 @@ function IconSliders() {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function findPalettePresetId(palette: PaletteSettings): string {
-  const match = palettePresets.find(
-    (p) =>
-      p.palette.primary_color === palette.primary_color &&
-      p.palette.secondary_color === palette.secondary_color &&
-      p.palette.accent_color === palette.accent_color,
-  )
-  return match?.id ?? 'custom'
-}
-
 function createDraftFromTheme(theme: Theme): TemplateDraft {
   return {
     name: theme.name,
@@ -553,12 +729,6 @@ export default function TemplateStudio({
   const [slugTouched, setSlugTouched] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [selectedPaletteId, setSelectedPaletteId] = useState<string>(() =>
-    isEditMode ? findPalettePresetId(initialTheme.palette) : palettePresets[0].id,
-  )
-  const [showCustomPalette, setShowCustomPalette] = useState(
-    () => isEditMode && findPalettePresetId(initialTheme.palette) === 'custom',
-  )
 
   function updateField<K extends keyof TemplateDraft>(key: K, value: TemplateDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }))
@@ -569,8 +739,6 @@ export default function TemplateStudio({
       ...current,
       palette: { ...current.palette, [key]: value },
     }))
-    setSelectedPaletteId('custom')
-    setShowCustomPalette(true)
   }
 
   function updateTypography<K extends keyof AdvancedTemplateSettings['typography']>(
@@ -667,30 +835,22 @@ export default function TemplateStudio({
     }))
   }
 
-  function applyPalettePreset(preset: PalettePreset) {
+  function applyStylePreset(preset: StylePreset) {
     setDraft((current) => ({
       ...current,
       palette: preset.palette,
+      company_name: current.company_name || preset.company_name,
+      is_default: preset.is_default,
+      markdown_preset: preset.id,
       advanced: {
         ...current.advanced,
-        markdown_styles: createPresetStyles(
-          current.markdown_preset,
-          preset.palette,
-          current.advanced,
-        ),
-      },
-    }))
-    setSelectedPaletteId(preset.id)
-    setShowCustomPalette(false)
-  }
-
-  function applyMarkdownPreset(preset: MarkdownPreset) {
-    setDraft((current) => ({
-      ...current,
-      markdown_preset: preset,
-      advanced: {
-        ...current.advanced,
-        markdown_styles: createPresetStyles(preset, current.palette, current.advanced),
+        typography: preset.typography,
+        layout: preset.layout,
+        header: preset.header,
+        footer: preset.footer,
+        markdown_styles: createPresetStyles(preset.id, preset.palette, {
+          typography: preset.typography,
+        }),
       },
     }))
   }
@@ -740,8 +900,6 @@ export default function TemplateStudio({
         setSuccess(`"${saved.name}" saved.`)
         setDraft(createInitialDraft())
         setSlugTouched(false)
-        setSelectedPaletteId(palettePresets[0].id)
-        setShowCustomPalette(false)
       }
       onSaved(saved)
     } catch (err: unknown) {
@@ -898,14 +1056,60 @@ export default function TemplateStudio({
           {/* ── Palette ────────────────────────────────────────────── */}
           <CollapsibleSection
             title="Palette"
-            subtitle="Colors and visual theme."
+            subtitle="Fine-tune colors after choosing the main style preset."
             icon={<IconPalette />}
           >
-            <div className="grid gap-3 lg:grid-cols-2">
-              {palettePresets.map((preset) => (
+            <div className="grid gap-4 rounded-xl bg-slate-50 p-4 md:grid-cols-2 lg:grid-cols-3">
+              <Field label="Primary">
+                <ColorInput
+                  value={draft.palette.primary_color}
+                  onChange={(v) => updatePalette('primary_color', v)}
+                />
+              </Field>
+              <Field label="Secondary">
+                <ColorInput
+                  value={draft.palette.secondary_color}
+                  onChange={(v) => updatePalette('secondary_color', v)}
+                />
+              </Field>
+              <Field label="Accent">
+                <ColorInput
+                  value={draft.palette.accent_color}
+                  onChange={(v) => updatePalette('accent_color', v)}
+                />
+              </Field>
+              <Field label="Background">
+                <ColorInput
+                  value={draft.palette.background_color}
+                  onChange={(v) => updatePalette('background_color', v)}
+                />
+              </Field>
+              <Field label="Surface">
+                <ColorInput
+                  value={draft.palette.surface_color}
+                  onChange={(v) => updatePalette('surface_color', v)}
+                />
+              </Field>
+              <Field label="Muted">
+                <ColorInput
+                  value={draft.palette.muted_color}
+                  onChange={(v) => updatePalette('muted_color', v)}
+                />
+              </Field>
+            </div>
+          </CollapsibleSection>
+
+          {/* ── Style Presets ───────────────────────────────────── */}
+          <CollapsibleSection
+            title="Style Presets"
+            subtitle="Choose the main visual direction first. This drives the overall report style."
+            icon={<IconText />}
+          >
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {stylePresets.map((preset) => (
                 <PresetCard
                   key={preset.id}
-                  selected={selectedPaletteId === preset.id && !showCustomPalette}
+                  selected={draft.markdown_preset === preset.id}
                   title={preset.name}
                   description={preset.description}
                   swatches={[
@@ -914,121 +1118,9 @@ export default function TemplateStudio({
                     preset.palette.accent_color,
                     preset.palette.surface_color,
                   ]}
-                  onClick={() => applyPalettePreset(preset)}
+                  onClick={() => applyStylePreset(preset)}
                 />
               ))}
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedPaletteId('custom')
-                  setShowCustomPalette((current) => !current)
-                }}
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                {showCustomPalette ? 'Hide Custom Palette' : 'Create Custom Palette'}
-              </button>
-            </div>
-
-            {showCustomPalette && (
-              <div className="mt-4 grid gap-4 rounded-xl bg-slate-50 p-4 md:grid-cols-2 lg:grid-cols-3">
-                <Field label="Primary">
-                  <ColorInput
-                    value={draft.palette.primary_color}
-                    onChange={(v) => updatePalette('primary_color', v)}
-                  />
-                </Field>
-                <Field label="Secondary">
-                  <ColorInput
-                    value={draft.palette.secondary_color}
-                    onChange={(v) => updatePalette('secondary_color', v)}
-                  />
-                </Field>
-                <Field label="Accent">
-                  <ColorInput
-                    value={draft.palette.accent_color}
-                    onChange={(v) => updatePalette('accent_color', v)}
-                  />
-                </Field>
-                <Field label="Background">
-                  <ColorInput
-                    value={draft.palette.background_color}
-                    onChange={(v) => updatePalette('background_color', v)}
-                  />
-                </Field>
-                <Field label="Surface">
-                  <ColorInput
-                    value={draft.palette.surface_color}
-                    onChange={(v) => updatePalette('surface_color', v)}
-                  />
-                </Field>
-                <Field label="Muted">
-                  <ColorInput
-                    value={draft.palette.muted_color}
-                    onChange={(v) => updatePalette('muted_color', v)}
-                  />
-                </Field>
-              </div>
-            )}
-          </CollapsibleSection>
-
-          {/* ── Markdown Presets ───────────────────────────────────── */}
-          <CollapsibleSection
-            title="Markdown Presets"
-            subtitle="Typography style across all markdown elements."
-            icon={<IconText />}
-          >
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <PresetCard
-                selected={draft.markdown_preset === 'enterprise'}
-                title="Enterprise"
-                description="Balanced spacing, clear hierarchy, and strong table headers."
-                swatches={[
-                  draft.palette.primary_color,
-                  draft.palette.secondary_color,
-                  draft.palette.surface_color,
-                  draft.palette.muted_color,
-                ]}
-                onClick={() => applyMarkdownPreset('enterprise')}
-              />
-              <PresetCard
-                selected={draft.markdown_preset === 'executive'}
-                title="Executive"
-                description="More generous spacing and stronger emphasis for polished summaries."
-                swatches={[
-                  draft.palette.primary_color,
-                  draft.palette.accent_color,
-                  draft.palette.surface_color,
-                  '#FFFFFF',
-                ]}
-                onClick={() => applyMarkdownPreset('executive')}
-              />
-              <PresetCard
-                selected={draft.markdown_preset === 'minimal'}
-                title="Minimal"
-                description="Quiet surfaces and lighter framing for restrained documents."
-                swatches={[
-                  draft.palette.primary_color,
-                  draft.palette.secondary_color,
-                  '#FFFFFF',
-                  draft.palette.muted_color,
-                ]}
-                onClick={() => applyMarkdownPreset('minimal')}
-              />
-              <PresetCard
-                selected={draft.markdown_preset === 'smooth'}
-                title="Smooth"
-                description="Soft panels and gentler spacing for more modern report blocks."
-                swatches={[
-                  draft.palette.primary_color,
-                  draft.palette.accent_color,
-                  draft.palette.surface_color,
-                  '#FFFFFF',
-                ]}
-                onClick={() => applyMarkdownPreset('smooth')}
-              />
             </div>
           </CollapsibleSection>
 
@@ -1554,8 +1646,6 @@ export default function TemplateStudio({
                   setSlugTouched(false)
                   setSuccess(null)
                   setError(null)
-                  setSelectedPaletteId(palettePresets[0].id)
-                  setShowCustomPalette(false)
                 }}
                 className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
               >
