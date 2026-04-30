@@ -22,3 +22,6 @@ mongo_data/
 generated-pdfs/
 
 .vscode
+
+CLAUDE.md
+.claude

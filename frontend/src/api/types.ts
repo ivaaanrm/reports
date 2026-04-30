@@ -8,6 +8,15 @@ export interface LogoAsset {
   width: number
 }
 
+export interface PaletteSettings {
+  primary_color: string
+  secondary_color: string
+  accent_color: string
+  background_color: string
+  surface_color: string
+  muted_color: string
+}
+
 export interface HeaderFooterSettings {
   enabled: boolean
   text: string | null
@@ -15,6 +24,22 @@ export interface HeaderFooterSettings {
   show_logo: boolean
   divider: boolean
   show_page_numbers: boolean
+}
+
+export interface TypographySettings {
+  font_family: string
+  font_size_body: number
+  font_size_heading: number
+  line_spacing: number
+}
+
+export interface LayoutSettings {
+  page_size: string
+  margin_top: number
+  margin_bottom: number
+  margin_left: number
+  margin_right: number
+  columns: number
 }
 
 export interface HeadingStyle {
@@ -86,6 +111,14 @@ export interface MarkdownStyles {
   tables: TableStyleSettings
 }
 
+export interface AdvancedTemplateSettings {
+  typography: TypographySettings
+  layout: LayoutSettings
+  header: HeaderFooterSettings
+  footer: HeaderFooterSettings
+  markdown_styles: MarkdownStyles
+}
+
 export interface Theme {
   id: string
   name: string
@@ -93,27 +126,10 @@ export interface Theme {
   description: string
   is_default: boolean
   company_name: string
-  font_family: string
-  font_size_body: number
-  font_size_heading: number
-  primary_color: string
-  secondary_color: string
-  accent_color: string
-  background_color: string
-  surface_color: string
-  muted_color: string
-  page_size: string
-  margin_top: number
-  margin_bottom: number
-  margin_left: number
-  margin_right: number
-  line_spacing: number
-  columns: number
   logo: LogoAsset | null
-  header: HeaderFooterSettings
-  footer: HeaderFooterSettings
+  palette: PaletteSettings
   markdown_preset: MarkdownPreset
-  markdown_styles: MarkdownStyles
+  advanced: AdvancedTemplateSettings
   created_at: string
   updated_at: string
 }
@@ -124,25 +140,8 @@ export interface ThemeCreate {
   description?: string
   is_default?: boolean
   company_name?: string
-  font_family?: string
-  font_size_body?: number
-  font_size_heading?: number
-  primary_color?: string
-  secondary_color?: string
-  accent_color?: string
-  background_color?: string
-  surface_color?: string
-  muted_color?: string
-  page_size?: string
-  margin_top?: number
-  margin_bottom?: number
-  margin_left?: number
-  margin_right?: number
-  line_spacing?: number
-  columns?: number
   logo?: LogoAsset | null
-  header?: HeaderFooterSettings
-  footer?: HeaderFooterSettings
+  palette?: PaletteSettings
   markdown_preset?: MarkdownPreset
-  markdown_styles?: MarkdownStyles
+  advanced?: AdvancedTemplateSettings
 }

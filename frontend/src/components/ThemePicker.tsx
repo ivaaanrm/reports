@@ -7,6 +7,14 @@ interface Props {
   onSelect: (slug: string) => void
 }
 
+function CheckIcon() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
 export default function ThemePicker({ selectedSlug, onSelect }: Props) {
   const [themes, setThemes] = useState<Theme[]>([])
   const [loading, setLoading] = useState(true)
@@ -19,46 +27,43 @@ export default function ThemePicker({ selectedSlug, onSelect }: Props) {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <p className="text-sm text-slate-400">Loading templates…</p>
-  if (error) return <p className="text-sm text-red-500">{error}</p>
+  if (loading) return <p className="text-xs text-slate-400">Loading…</p>
+  if (error) return <p className="text-xs text-red-500">{error}</p>
   if (!themes.length)
-    return <p className="text-sm text-slate-400">No templates yet. Create one in Template Studio.</p>
+    return <p className="text-xs text-slate-400">No templates — create one in Studio.</p>
 
   return (
-    <div>
-      <h2 className="mb-2 text-sm font-semibold text-slate-700">Template</h2>
-      <div className="flex flex-col gap-2">
-        {themes.map((theme) => (
+    <div className="flex flex-wrap gap-2">
+      {themes.map((theme) => {
+        const isSelected = selectedSlug === theme.slug
+        return (
           <button
             key={theme.slug}
             onClick={() => onSelect(theme.slug)}
-            className={`rounded-2xl border px-4 py-3 text-left text-sm transition-colors ${
-              selectedSlug === theme.slug
-                ? 'border-sky-500 bg-sky-50 text-sky-800'
-                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+            className={`w-36 overflow-hidden rounded-xl border text-left transition-all duration-150 ${
+              isSelected
+                ? 'border-slate-950 shadow-[0_0_0_1px_#0f172a]'
+                : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
             }`}
           >
-            <div className="flex items-center gap-2">
-              <div
-                className="h-4 w-4 flex-shrink-0 rounded-sm border border-gray-200"
-                style={{ backgroundColor: theme.primary_color }}
-              />
-              <span className="font-medium">{theme.name}</span>
-              {theme.is_default && (
-                <span className="ml-auto text-xs text-slate-400">default</span>
+            {/* Three-color palette strip */}
+            <div className="flex h-1.5 w-full">
+              <div className="flex-1" style={{ backgroundColor: theme.palette.primary_color }} />
+              <div className="flex-1" style={{ backgroundColor: theme.palette.secondary_color }} />
+              <div className="flex-1" style={{ backgroundColor: theme.palette.accent_color }} />
+            </div>
+            {/* Name row */}
+            <div className="flex items-center justify-between gap-1 bg-white px-3 py-2">
+              <span className="truncate text-xs font-semibold text-slate-700">{theme.name}</span>
+              {isSelected && (
+                <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-slate-950">
+                  <CheckIcon />
+                </span>
               )}
             </div>
-            {theme.company_name && (
-              <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
-                {theme.company_name}
-              </p>
-            )}
-            {theme.description && (
-              <p className="mt-0.5 text-xs text-slate-500">{theme.description}</p>
-            )}
           </button>
-        ))}
-      </div>
+        )
+      })}
     </div>
   )
 }
