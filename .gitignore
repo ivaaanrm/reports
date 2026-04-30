@@ -25,3 +25,7 @@ generated-pdfs/
 
 CLAUDE.md
 .claude
+
+
+skills-lock.json
+.agents
