@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Annotated, Literal
+
 from beanie import Document, Indexed
 from pydantic import BaseModel, Field
 
@@ -15,6 +16,15 @@ class LogoAsset(BaseModel):
     width: float = 96.0
 
 
+class PaletteSettings(BaseModel):
+    primary_color: str = "#000000"
+    secondary_color: str = "#666666"
+    accent_color: str = "#0F766E"
+    background_color: str = "#FFFFFF"
+    surface_color: str = "#F8FAFC"
+    muted_color: str = "#CBD5E1"
+
+
 class HeaderFooterSettings(BaseModel):
     enabled: bool = True
     text: str | None = None
@@ -22,6 +32,22 @@ class HeaderFooterSettings(BaseModel):
     show_logo: bool = False
     divider: bool = True
     show_page_numbers: bool = False
+
+
+class TypographySettings(BaseModel):
+    font_family: str = "Helvetica"
+    font_size_body: int = 11
+    font_size_heading: int = 18
+    line_spacing: float = 1.2
+
+
+class LayoutSettings(BaseModel):
+    page_size: str = "A4"
+    margin_top: float = 72.0
+    margin_bottom: float = 72.0
+    margin_left: float = 72.0
+    margin_right: float = 72.0
+    columns: int = 1
 
 
 class HeadingStyle(BaseModel):
@@ -93,41 +119,28 @@ class MarkdownStyles(BaseModel):
     tables: TableStyleSettings = Field(default_factory=TableStyleSettings)
 
 
-class Theme(Document):
-    name: str
-    slug: Annotated[str, Indexed(unique=True)]
-    description: str = ""
-    is_default: bool = False
-    company_name: str = ""
-
-    font_family: str = "Helvetica"
-    font_size_body: int = 11
-    font_size_heading: int = 18
-    primary_color: str = "#000000"
-    secondary_color: str = "#666666"
-    accent_color: str = "#0F766E"
-    background_color: str = "#FFFFFF"
-    surface_color: str = "#F8FAFC"
-    muted_color: str = "#CBD5E1"
-
-    page_size: str = "A4"
-    margin_top: float = 72.0
-    margin_bottom: float = 72.0
-    margin_left: float = 72.0
-    margin_right: float = 72.0
-    line_spacing: float = 1.2
-    columns: int = 1
-
-    logo: LogoAsset | None = None
+class AdvancedTemplateSettings(BaseModel):
+    typography: TypographySettings = Field(default_factory=TypographySettings)
+    layout: LayoutSettings = Field(default_factory=LayoutSettings)
     header: HeaderFooterSettings = Field(
         default_factory=lambda: HeaderFooterSettings(show_logo=True)
     )
     footer: HeaderFooterSettings = Field(
         default_factory=lambda: HeaderFooterSettings(show_page_numbers=True)
     )
-    markdown_preset: Literal["enterprise", "executive", "minimal"] = "enterprise"
     markdown_styles: MarkdownStyles = Field(default_factory=MarkdownStyles)
 
+
+class Theme(Document):
+    name: str
+    slug: Annotated[str, Indexed(unique=True)]
+    description: str = ""
+    is_default: bool = False
+    company_name: str = ""
+    logo: LogoAsset | None = None
+    palette: PaletteSettings = Field(default_factory=PaletteSettings)
+    markdown_preset: Literal["enterprise", "executive", "minimal"] = "enterprise"
+    advanced: AdvancedTemplateSettings = Field(default_factory=AdvancedTemplateSettings)
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
 

@@ -56,19 +56,22 @@ def _draw_region(
     if not region.enabled:
         return
 
-    left = theme.margin_left
-    right = doc.pagesize[0] - theme.margin_right
-    font_name = theme.font_family
+    layout = theme.advanced.layout
+    typography = theme.advanced.typography
+
+    left = layout.margin_left
+    right = doc.pagesize[0] - layout.margin_right
+    font_name = typography.font_family
     font_size = 9
     text = _region_text(region, theme)
     logo_payload = logo if region.show_logo else None
 
     if position == "header":
-        center_y = doc.pagesize[1] - theme.margin_top / 2
-        line_y = doc.pagesize[1] - theme.margin_top + 10
+        center_y = doc.pagesize[1] - layout.margin_top / 2
+        line_y = doc.pagesize[1] - layout.margin_top + 10
     else:
-        center_y = max(theme.margin_bottom / 2 - 4, 18)
-        line_y = theme.margin_bottom - 10
+        center_y = max(layout.margin_bottom / 2 - 4, 18)
+        line_y = layout.margin_bottom - 10
 
     if region.divider:
         canvas.setStrokeColor(primary)
@@ -123,9 +126,9 @@ def _draw_region(
 
 
 def _make_header_footer(theme: Theme):
-    primary = colors.HexColor(theme.primary_color)
-    secondary = colors.HexColor(theme.secondary_color)
-    background = colors.HexColor(theme.background_color)
+    primary = colors.HexColor(theme.palette.primary_color)
+    secondary = colors.HexColor(theme.palette.secondary_color)
+    background = colors.HexColor(theme.palette.background_color)
     logo = _load_logo(theme)
 
     def on_page(canvas, doc):
@@ -139,7 +142,7 @@ def _make_header_footer(theme: Theme):
             canvas,
             doc,
             theme=theme,
-            region=theme.header,
+            region=theme.advanced.header,
             position="header",
             primary=primary,
             secondary=secondary,
@@ -149,7 +152,7 @@ def _make_header_footer(theme: Theme):
             canvas,
             doc,
             theme=theme,
-            region=theme.footer,
+            region=theme.advanced.footer,
             position="footer",
             primary=primary,
             secondary=secondary,
@@ -163,16 +166,17 @@ def _make_header_footer(theme: Theme):
 def render(markdown_text: str, theme: Theme) -> BytesIO:
     try:
         buffer = BytesIO()
-        page_size = PAGE_SIZES.get(theme.page_size.upper(), A4)
+        layout = theme.advanced.layout
+        page_size = PAGE_SIZES.get(layout.page_size.upper(), A4)
         styles = build_styles(theme)
 
         doc = SimpleDocTemplate(
             buffer,
             pagesize=page_size,
-            topMargin=theme.margin_top,
-            bottomMargin=theme.margin_bottom,
-            leftMargin=theme.margin_left,
-            rightMargin=theme.margin_right,
+            topMargin=layout.margin_top,
+            bottomMargin=layout.margin_bottom,
+            leftMargin=layout.margin_left,
+            rightMargin=layout.margin_right,
         )
 
         tokens = parse(markdown_text)

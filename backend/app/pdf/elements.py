@@ -37,70 +37,78 @@ def _font_name(font_family: str, *, bold: bool = False, monospace: bool = False)
 
 
 def _base_preset(theme: Theme) -> dict:
+    palette = theme.palette
+    typography = theme.advanced.typography
     return {
         "headings": {
             "h1": {
-                "color": theme.primary_color,
-                "font_size": theme.font_size_heading,
+                "color": palette.primary_color,
+                "font_size": typography.font_size_heading,
                 "space_before": 12.0,
                 "space_after": 6.0,
             },
             "h2": {
-                "color": theme.primary_color,
-                "font_size": max(theme.font_size_heading - 2, theme.font_size_body + 4),
+                "color": palette.primary_color,
+                "font_size": max(
+                    typography.font_size_heading - 2, typography.font_size_body + 4
+                ),
                 "space_before": 10.0,
                 "space_after": 5.0,
             },
             "h3": {
-                "color": theme.primary_color,
-                "font_size": max(theme.font_size_heading - 4, theme.font_size_body + 3),
+                "color": palette.primary_color,
+                "font_size": max(
+                    typography.font_size_heading - 4, typography.font_size_body + 3
+                ),
                 "space_before": 8.0,
                 "space_after": 4.0,
             },
             "h4": {
-                "color": theme.primary_color,
-                "font_size": max(theme.font_size_heading - 6, theme.font_size_body + 2),
+                "color": palette.primary_color,
+                "font_size": max(
+                    typography.font_size_heading - 6, typography.font_size_body + 2
+                ),
                 "space_before": 6.0,
                 "space_after": 4.0,
             },
         },
         "body": {
-            "color": theme.secondary_color,
-            "font_size": theme.font_size_body,
+            "color": palette.secondary_color,
+            "font_size": typography.font_size_body,
             "space_after": 6.0,
         },
         "lists": {
-            "text_color": theme.secondary_color,
-            "bullet_color": theme.primary_color,
+            "text_color": palette.secondary_color,
+            "bullet_color": palette.primary_color,
             "item_spacing": 4.0,
             "left_indent": 18.0,
         },
         "blockquotes": {
-            "text_color": theme.secondary_color,
-            "border_color": theme.muted_color,
-            "background_color": theme.surface_color,
+            "text_color": palette.secondary_color,
+            "border_color": palette.muted_color,
+            "background_color": palette.surface_color,
             "left_indent": 18.0,
             "padding": 8.0,
         },
         "code": {
             "text_color": "#0F172A",
-            "background_color": theme.surface_color,
-            "border_color": theme.muted_color,
-            "font_size": max(theme.font_size_body - 1, 9),
+            "background_color": palette.surface_color,
+            "border_color": palette.muted_color,
+            "font_size": max(typography.font_size_body - 1, 9),
             "padding": 8.0,
         },
         "horizontal_rules": {
-            "color": theme.muted_color,
+            "color": palette.muted_color,
             "thickness": 0.75,
             "spacing_before": 6.0,
             "spacing_after": 6.0,
         },
         "tables": {
-            "header_background_color": theme.primary_color,
+            "header_background_color": palette.primary_color,
             "header_text_color": "#FFFFFF",
             "row_background_color": "#FFFFFF",
-            "alternate_row_background_color": theme.surface_color,
-            "border_color": theme.muted_color,
+            "alternate_row_background_color": palette.surface_color,
+            "border_color": palette.muted_color,
             "cell_padding": 6.0,
         },
     }
@@ -120,8 +128,8 @@ def _preset_defaults(theme: Theme) -> dict:
     elif theme.markdown_preset == "minimal":
         preset["blockquotes"]["background_color"] = "#FFFFFF"
         preset["code"]["background_color"] = "#FFFFFF"
-        preset["tables"]["header_background_color"] = theme.surface_color
-        preset["tables"]["header_text_color"] = theme.primary_color
+        preset["tables"]["header_background_color"] = theme.palette.surface_color
+        preset["tables"]["header_text_color"] = theme.palette.primary_color
         preset["tables"]["alternate_row_background_color"] = "#FFFFFF"
         preset["horizontal_rules"]["thickness"] = 0.5
 
@@ -140,22 +148,23 @@ def _merge_nested(target: dict, source: dict) -> None:
 
 def resolve_markdown_styles(theme: Theme) -> dict:
     resolved = deepcopy(_preset_defaults(theme))
-    overrides = theme.markdown_styles.model_dump(mode="python")
+    overrides = theme.advanced.markdown_styles.model_dump(mode="python")
     _merge_nested(resolved, overrides)
     return resolved
 
 
 def build_styles(theme: Theme) -> dict:
     resolved = resolve_markdown_styles(theme)
+    typography = theme.advanced.typography
     body = resolved["body"]
     blockquotes = resolved["blockquotes"]
     code = resolved["code"]
 
     base = ParagraphStyle(
         "body",
-        fontName=_font_name(theme.font_family),
+        fontName=_font_name(typography.font_family),
         fontSize=body["font_size"],
-        leading=body["font_size"] * theme.line_spacing * 1.2,
+        leading=body["font_size"] * typography.line_spacing * 1.2,
         textColor=colors.HexColor(body["color"]),
         spaceAfter=body["space_after"],
     )
@@ -165,7 +174,7 @@ def build_styles(theme: Theme) -> dict:
         return ParagraphStyle(
             f"h{level}",
             parent=base,
-            fontName=_font_name(theme.font_family, bold=True),
+            fontName=_font_name(typography.font_family, bold=True),
             fontSize=data["font_size"],
             textColor=colors.HexColor(data["color"]),
             spaceBefore=data["space_before"],
@@ -195,7 +204,7 @@ def build_styles(theme: Theme) -> dict:
     code_style = ParagraphStyle(
         "code",
         parent=base,
-        fontName=_font_name(theme.font_family, monospace=True),
+        fontName=_font_name(typography.font_family, monospace=True),
         fontSize=code["font_size"],
         textColor=colors.HexColor(code["text_color"]),
         backColor=colors.HexColor(code["background_color"]),
@@ -208,7 +217,7 @@ def build_styles(theme: Theme) -> dict:
     table_header = ParagraphStyle(
         "table_header",
         parent=base,
-        fontName=_font_name(theme.font_family, bold=True),
+        fontName=_font_name(typography.font_family, bold=True),
         textColor=colors.HexColor(resolved["tables"]["header_text_color"]),
         spaceAfter=0,
     )
