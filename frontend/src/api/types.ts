@@ -1,5 +1,5 @@
 export type Alignment = 'left' | 'center' | 'right'
-export type MarkdownPreset = 'enterprise' | 'executive' | 'minimal'
+export type MarkdownPreset = 'enterprise' | 'executive' | 'minimal' | 'smooth'
 
 export interface LogoAsset {
   file_name: string

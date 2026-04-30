@@ -1,4 +1,5 @@
 from copy import deepcopy
+from html import escape
 
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
@@ -89,6 +90,8 @@ def _base_preset(theme: Theme) -> dict:
             "background_color": palette.surface_color,
             "left_indent": 18.0,
             "padding": 8.0,
+            "accent_color": palette.primary_color,
+            "panel": False,
         },
         "code": {
             "text_color": "#0F172A",
@@ -96,6 +99,7 @@ def _base_preset(theme: Theme) -> dict:
             "border_color": palette.muted_color,
             "font_size": max(typography.font_size_body - 1, 9),
             "padding": 8.0,
+            "panel": False,
         },
         "horizontal_rules": {
             "color": palette.muted_color,
@@ -110,6 +114,8 @@ def _base_preset(theme: Theme) -> dict:
             "alternate_row_background_color": palette.surface_color,
             "border_color": palette.muted_color,
             "cell_padding": 6.0,
+            "panel": False,
+            "panel_background_color": "#FFFFFF",
         },
     }
 
@@ -132,6 +138,29 @@ def _preset_defaults(theme: Theme) -> dict:
         preset["tables"]["header_text_color"] = theme.palette.primary_color
         preset["tables"]["alternate_row_background_color"] = "#FFFFFF"
         preset["horizontal_rules"]["thickness"] = 0.5
+    elif theme.markdown_preset == "smooth":
+        preset["body"]["space_after"] = 10.0
+        preset["lists"]["item_spacing"] = 6.0
+        preset["lists"]["left_indent"] = 20.0
+        preset["blockquotes"]["padding"] = 12.0
+        preset["blockquotes"]["left_indent"] = 0.0
+        preset["blockquotes"]["border_color"] = theme.palette.accent_color
+        preset["blockquotes"]["accent_color"] = theme.palette.accent_color
+        preset["blockquotes"]["panel"] = True
+        preset["code"]["background_color"] = "#FFFFFF"
+        preset["code"]["padding"] = 12.0
+        preset["code"]["panel"] = True
+        preset["horizontal_rules"]["thickness"] = 0.5
+        preset["horizontal_rules"]["spacing_before"] = 10.0
+        preset["horizontal_rules"]["spacing_after"] = 10.0
+        preset["tables"]["cell_padding"] = 8.0
+        preset["tables"]["panel"] = True
+        preset["headings"]["h1"]["space_before"] = 0.0
+        preset["headings"]["h1"]["space_after"] = 12.0
+        preset["headings"]["h2"]["space_before"] = 16.0
+        preset["headings"]["h2"]["space_after"] = 8.0
+        preset["headings"]["h3"]["space_before"] = 12.0
+        preset["headings"]["h3"]["space_after"] = 6.0
 
     return preset
 
@@ -185,7 +214,7 @@ def build_styles(theme: Theme) -> dict:
         "list",
         parent=base,
         textColor=colors.HexColor(resolved["lists"]["text_color"]),
-        leftIndent=resolved["lists"]["left_indent"],
+        leftIndent=0,
         spaceAfter=resolved["lists"]["item_spacing"],
     )
 
@@ -193,12 +222,19 @@ def build_styles(theme: Theme) -> dict:
         "blockquote",
         parent=base,
         textColor=colors.HexColor(blockquotes["text_color"]),
-        leftIndent=blockquotes["left_indent"],
-        borderColor=colors.HexColor(blockquotes["border_color"]),
-        borderWidth=0.75,
-        borderPadding=blockquotes["padding"],
-        backColor=colors.HexColor(blockquotes["background_color"]),
-        spaceAfter=body["space_after"],
+        leftIndent=0,
+        spaceBefore=0,
+        spaceAfter=max(body["space_after"] - 2, 4),
+    )
+
+    blockquote_heading = ParagraphStyle(
+        "blockquote_heading",
+        parent=base,
+        fontName=_font_name(typography.font_family, bold=True),
+        fontSize=max(body["font_size"] + 1, 11),
+        textColor=colors.HexColor(theme.palette.primary_color),
+        spaceBefore=0,
+        spaceAfter=4,
     )
 
     code_style = ParagraphStyle(
@@ -209,9 +245,9 @@ def build_styles(theme: Theme) -> dict:
         textColor=colors.HexColor(code["text_color"]),
         backColor=colors.HexColor(code["background_color"]),
         borderColor=colors.HexColor(code["border_color"]),
-        borderWidth=0.75,
+        borderWidth=0 if code.get("panel") else 0.75,
         borderPadding=code["padding"],
-        spaceAfter=body["space_after"] + 2,
+        spaceAfter=0 if code.get("panel") else body["space_after"] + 2,
     )
 
     table_header = ParagraphStyle(
@@ -232,6 +268,7 @@ def build_styles(theme: Theme) -> dict:
         "body": base,
         "list": list_style,
         "blockquote": blockquote_style,
+        "blockquote_heading": blockquote_heading,
         "code": code_style,
         "table_header": table_header,
         "table_body": table_body,
@@ -250,7 +287,7 @@ def _inline_text(children: list[dict] | None) -> str:
     parts: list[str] = []
     for child in children:
         token_type = child.get("type", "")
-        raw = child.get("raw", "")
+        raw = escape(child.get("raw", ""))
         inner = _inline_text(child.get("children"))
 
         if token_type == "strong":
@@ -258,7 +295,9 @@ def _inline_text(children: list[dict] | None) -> str:
         elif token_type == "emphasis":
             parts.append(f"<i>{inner}</i>")
         elif token_type == "codespan":
-            parts.append(f"<font name='Courier'>{raw}</font>")
+            parts.append(f"<font name='Courier'>{raw or inner}</font>")
+        elif token_type == "link":
+            parts.append(inner or raw)
         elif token_type in {"softbreak", "softline_break", "line_break"}:
             parts.append("<br/>")
         else:
@@ -267,39 +306,240 @@ def _inline_text(children: list[dict] | None) -> str:
     return "".join(parts)
 
 
-def _list_item_text(item: dict) -> str:
-    parts: list[str] = []
+def _panel(
+    content: Flowable | list[Flowable],
+    *,
+    background_color: str,
+    border_color: str,
+    padding: float,
+    border_width: float = 0.75,
+) -> Table:
+    panel = Table([[content]], hAlign="LEFT")
+    panel.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(background_color)),
+                ("BOX", (0, 0), (-1, -1), border_width, colors.HexColor(border_color)),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), padding),
+                ("RIGHTPADDING", (0, 0), (-1, -1), padding),
+                ("TOPPADDING", (0, 0), (-1, -1), padding),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), padding),
+            ]
+        )
+    )
+    return panel
+
+
+def _quote_panel(content: list[Flowable], meta: dict) -> Table:
+    quote = meta["blockquotes"]
+    padding = quote["padding"]
+    panel = Table([[Spacer(1, 1), content]], colWidths=[4, None], hAlign="LEFT")
+    panel.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor(quote["accent_color"])),
+                ("BACKGROUND", (1, 0), (1, -1), colors.HexColor(quote["background_color"])),
+                ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor(quote["border_color"])),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ("RIGHTPADDING", (0, 0), (0, -1), 0),
+                ("TOPPADDING", (0, 0), (0, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (0, -1), 0),
+                ("LEFTPADDING", (1, 0), (1, -1), padding),
+                ("RIGHTPADDING", (1, 0), (1, -1), padding),
+                ("TOPPADDING", (1, 0), (1, -1), padding),
+                ("BOTTOMPADDING", (1, 0), (1, -1), padding),
+            ]
+        )
+    )
+    return panel
+
+
+def _list_item_flowables(item: dict, styles: dict, meta: dict) -> list[Flowable]:
+    flowables: list[Flowable] = []
+
     for child in item.get("children") or []:
-        if child.get("type") in {"paragraph", "block_text"}:
-            parts.append(_inline_text(child.get("children") or []))
-    return "<br/>".join(part for part in parts if part)
+        child_type = child.get("type", "")
+
+        if child_type in {"paragraph", "block_text"}:
+            text = _inline_text(child.get("children") or [])
+            if text:
+                flowables.append(Paragraph(text, styles["list"]))
+        elif child_type in {"list", "bullet_list", "ordered_list"}:
+            nested = _build_list_flowable(child, styles, meta)
+            if nested is not None:
+                flowables.append(nested)
+        elif child_type == "block_quote":
+            flowables.extend(_build_blockquote_flowables(child, styles, meta))
+        elif child_type in {"block_code", "fenced_code"}:
+            flowables.extend(_build_code_flowables(child, styles, meta))
+        elif child_type == "blank_line":
+            flowables.append(Spacer(1, 4))
+
+    while flowables and isinstance(flowables[-1], Spacer):
+        flowables.pop()
+
+    return flowables
 
 
-def _table_rows(table_token: dict, styles: dict) -> list[list[Paragraph]]:
+def _build_list_flowable(token: dict, styles: dict, meta: dict) -> ListFlowable | None:
+    items: list[ListItem] = []
+    ordered = bool(token.get("attrs", {}).get("ordered"))
+
+    for index, item in enumerate(token.get("children") or [], start=1):
+        content = _list_item_flowables(item, styles, meta)
+        if not content:
+            continue
+
+        item_content: Flowable | list[Flowable] = content[0] if len(content) == 1 else content
+        kwargs = {"bulletColor": colors.HexColor(meta["lists"]["bullet_color"])}
+        if ordered:
+            kwargs["value"] = index
+        items.append(ListItem(item_content, **kwargs))
+
+    if not items:
+        return None
+
+    return ListFlowable(
+        items,
+        bulletType="1" if ordered else "bullet",
+        leftIndent=meta["lists"]["left_indent"],
+    )
+
+
+def _table_rows(
+    table_token: dict, styles: dict
+) -> tuple[list[list[Paragraph]], list[tuple[int, int, str]]]:
     rows: list[list[Paragraph]] = []
+    alignments: list[tuple[int, int, str]] = []
 
     for child in table_token.get("children") or []:
         if child.get("type") == "table_head":
-            rows.append(
-                [
+            row_index = len(rows)
+            header_cells = []
+            for col_index, cell in enumerate(child.get("children") or []):
+                header_cells.append(
                     Paragraph(_inline_text(cell.get("children") or []), styles["table_header"])
-                    for cell in child.get("children") or []
-                ]
-            )
+                )
+                align = (cell.get("attrs") or {}).get("align")
+                if align:
+                    alignments.append((col_index, row_index, align.upper()))
+            rows.append(header_cells)
         elif child.get("type") == "table_body":
             for row in child.get("children") or []:
-                rows.append(
-                    [
+                row_index = len(rows)
+                body_cells = []
+                for col_index, cell in enumerate(row.get("children") or []):
+                    body_cells.append(
                         Paragraph(_inline_text(cell.get("children") or []), styles["table_body"])
-                        for cell in row.get("children") or []
-                    ]
-                )
+                    )
+                    align = (cell.get("attrs") or {}).get("align")
+                    if align:
+                        alignments.append((col_index, row_index, align.upper()))
+                rows.append(body_cells)
 
-    return rows
+    return rows, alignments
 
 
-def build_flowables(tokens: list[dict], theme: Theme) -> list[Flowable]:
-    styles = build_styles(theme)
+def _build_code_flowables(token: dict, styles: dict, meta: dict) -> list[Flowable]:
+    code_block = Preformatted(token.get("raw", "").rstrip(), styles["code"])
+    if meta["code"].get("panel"):
+        return [
+            _panel(
+                code_block,
+                background_color=meta["code"]["background_color"],
+                border_color=meta["code"]["border_color"],
+                padding=meta["code"]["padding"],
+            ),
+            Spacer(1, styles["body"].spaceAfter),
+        ]
+    return [code_block]
+
+
+def _build_blockquote_flowables(token: dict, styles: dict, meta: dict) -> list[Flowable]:
+    content: list[Flowable] = []
+
+    for child in token.get("children") or []:
+        child_type = child.get("type", "")
+
+        if child_type in {"paragraph", "block_text"}:
+            text = _inline_text(child.get("children") or [])
+            if text:
+                content.append(Paragraph(text, styles["blockquote"]))
+        elif child_type in {"heading", "atx_heading"}:
+            text = _inline_text(child.get("children") or [])
+            if text:
+                content.append(Paragraph(text, styles["blockquote_heading"]))
+        elif child_type in {"list", "bullet_list", "ordered_list"}:
+            nested_list = _build_list_flowable(child, styles, meta)
+            if nested_list is not None:
+                content.append(nested_list)
+        elif child_type in {"block_code", "fenced_code"}:
+            content.extend(_build_code_flowables(child, styles, meta))
+        elif child_type == "block_quote":
+            content.extend(_build_blockquote_flowables(child, styles, meta))
+        elif child_type == "blank_line":
+            content.append(Spacer(1, 4))
+
+    while content and isinstance(content[-1], Spacer):
+        content.pop()
+
+    if not content:
+        return []
+
+    if meta["blockquotes"].get("panel"):
+        return [_quote_panel(content, meta), Spacer(1, styles["body"].spaceAfter)]
+
+    return content
+
+
+def _build_table_flowables(token: dict, styles: dict, meta: dict) -> list[Flowable]:
+    rows, alignments = _table_rows(token, styles)
+    if not rows:
+        return []
+
+    cell_padding = meta["tables"]["cell_padding"]
+    table = Table(rows, hAlign="LEFT", repeatRows=1)
+    table_style_commands = [
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(meta["tables"]["header_background_color"])),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor(meta["tables"]["header_text_color"])),
+        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor(meta["tables"]["border_color"])),
+        ("INNERGRID", (0, 0), (-1, -1), 0.35, colors.HexColor(meta["tables"]["border_color"])),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), cell_padding),
+        ("RIGHTPADDING", (0, 0), (-1, -1), cell_padding),
+        ("TOPPADDING", (0, 0), (-1, -1), cell_padding * 0.75),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), cell_padding * 0.75),
+        (
+            "ROWBACKGROUNDS",
+            (0, 1),
+            (-1, -1),
+            [
+                colors.HexColor(meta["tables"]["row_background_color"]),
+                colors.HexColor(meta["tables"]["alternate_row_background_color"]),
+            ],
+        ),
+    ]
+
+    for col_index, row_index, align in alignments:
+        table_style_commands.append(("ALIGN", (col_index, row_index), (col_index, row_index), align))
+
+    table.setStyle(TableStyle(table_style_commands))
+
+    table_flowable: Flowable = table
+    if meta["tables"].get("panel"):
+        table_flowable = _panel(
+            table,
+            background_color=meta["tables"]["panel_background_color"],
+            border_color=meta["tables"]["border_color"],
+            padding=max(cell_padding * 0.6, 6.0),
+        )
+
+    return [Spacer(1, 4), table_flowable, Spacer(1, 8)]
+
+
+def _build_token_flowables(tokens: list[dict], styles: dict) -> list[Flowable]:
     meta = styles["meta"]
     flowables: list[Flowable] = []
 
@@ -312,62 +552,24 @@ def build_flowables(tokens: list[dict], theme: Theme) -> list[Flowable]:
             level = max(1, min(4, level))
             flowables.append(Paragraph(_inline_text(children), styles[f"h{level}"]))
 
-        elif token_type == "paragraph":
-            flowables.append(Paragraph(_inline_text(children), styles["body"]))
+        elif token_type in {"paragraph", "block_text"}:
+            text = _inline_text(children)
+            if text:
+                flowables.append(Paragraph(text, styles["body"]))
 
         elif token_type in {"block_code", "fenced_code"}:
-            flowables.append(Preformatted(token.get("raw", "").rstrip(), styles["code"]))
+            flowables.extend(_build_code_flowables(token, styles, meta))
 
         elif token_type == "block_quote":
-            for child in children:
-                text = _inline_text(child.get("children") or [])
-                if text:
-                    flowables.append(Paragraph(text, styles["blockquote"]))
+            flowables.extend(_build_blockquote_flowables(token, styles, meta))
 
         elif token_type in {"list", "bullet_list", "ordered_list"}:
-            items = []
-            for item in children:
-                text = _list_item_text(item)
-                if text:
-                    items.append(
-                        ListItem(
-                            Paragraph(text, styles["list"]),
-                            bulletColor=colors.HexColor(meta["lists"]["bullet_color"]),
-                        )
-                    )
-            if items:
-                bullet_type = "1" if token.get("attrs", {}).get("ordered") else "bullet"
-                flowables.append(ListFlowable(items, bulletType=bullet_type))
+            list_flowable = _build_list_flowable(token, styles, meta)
+            if list_flowable is not None:
+                flowables.append(list_flowable)
 
         elif token_type == "table":
-            rows = _table_rows(token, styles)
-            if rows:
-                cell_padding = meta["tables"]["cell_padding"]
-                table = Table(rows, hAlign="LEFT", repeatRows=1)
-                table_style_commands = [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(meta["tables"]["header_background_color"])),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor(meta["tables"]["header_text_color"])),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor(meta["tables"]["border_color"])),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), cell_padding),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), cell_padding),
-                    ("TOPPADDING", (0, 0), (-1, -1), cell_padding * 0.7),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), cell_padding * 0.7),
-                ]
-
-                row_background = colors.HexColor(meta["tables"]["row_background_color"])
-                alt_background = colors.HexColor(meta["tables"]["alternate_row_background_color"])
-
-                for row_index in range(1, len(rows)):
-                    background = row_background if row_index % 2 else alt_background
-                    table_style_commands.append(
-                        ("BACKGROUND", (0, row_index), (-1, row_index), background)
-                    )
-
-                table.setStyle(TableStyle(table_style_commands))
-                flowables.append(Spacer(1, 4))
-                flowables.append(table)
-                flowables.append(Spacer(1, 8))
+            flowables.extend(_build_table_flowables(token, styles, meta))
 
         elif token_type == "thematic_break":
             hr = meta["horizontal_rules"]
@@ -385,3 +587,8 @@ def build_flowables(tokens: list[dict], theme: Theme) -> list[Flowable]:
             flowables.append(Spacer(1, 6))
 
     return flowables
+
+
+def build_flowables(tokens: list[dict], theme: Theme) -> list[Flowable]:
+    styles = build_styles(theme)
+    return _build_token_flowables(tokens, styles)

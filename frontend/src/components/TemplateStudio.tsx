@@ -177,6 +177,34 @@ function createPresetStyles(
     base.horizontal_rules.thickness = 0.5
   }
 
+  if (preset === 'smooth') {
+    base.body.space_after = 10
+    base.headings.h1.space_before = 0
+    base.headings.h1.space_after = 12
+    base.headings.h2.space_before = 16
+    base.headings.h2.space_after = 8
+    base.headings.h3.space_before = 12
+    base.headings.h3.space_after = 6
+    base.lists.item_spacing = 6
+    base.lists.left_indent = 20
+    base.blockquotes.border_color = palette.accent_color
+    base.blockquotes.background_color = palette.surface_color
+    base.blockquotes.left_indent = 0
+    base.blockquotes.padding = 12
+    base.code.background_color = '#FFFFFF'
+    base.code.border_color = palette.muted_color
+    base.code.padding = 12
+    base.horizontal_rules.thickness = 0.5
+    base.horizontal_rules.spacing_before = 10
+    base.horizontal_rules.spacing_after = 10
+    base.tables.header_background_color = palette.primary_color
+    base.tables.header_text_color = '#FFFFFF'
+    base.tables.row_background_color = '#FFFFFF'
+    base.tables.alternate_row_background_color = palette.surface_color
+    base.tables.border_color = palette.muted_color
+    base.tables.cell_padding = 8
+  }
+
   return base
 }
 
@@ -952,7 +980,7 @@ export default function TemplateStudio({
             subtitle="Typography style across all markdown elements."
             icon={<IconText />}
           >
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <PresetCard
                 selected={draft.markdown_preset === 'enterprise'}
                 title="Enterprise"
@@ -988,6 +1016,18 @@ export default function TemplateStudio({
                   draft.palette.muted_color,
                 ]}
                 onClick={() => applyMarkdownPreset('minimal')}
+              />
+              <PresetCard
+                selected={draft.markdown_preset === 'smooth'}
+                title="Smooth"
+                description="Soft panels and gentler spacing for more modern report blocks."
+                swatches={[
+                  draft.palette.primary_color,
+                  draft.palette.accent_color,
+                  draft.palette.surface_color,
+                  '#FFFFFF',
+                ]}
+                onClick={() => applyMarkdownPreset('smooth')}
               />
             </div>
           </CollapsibleSection>
@@ -1615,7 +1655,7 @@ export default function TemplateStudio({
                     >
                       •
                     </span>{' '}
-                    Consistent enterprise palette
+                    Consistent report palette
                   </li>
                   <li>
                     <span
@@ -1627,7 +1667,7 @@ export default function TemplateStudio({
                     >
                       •
                     </span>{' '}
-                    Reusable headers and footers
+                    Reusable headers, footers, and soft content blocks
                   </li>
                 </ul>
                 <blockquote

@@ -97,11 +97,59 @@ DEFAULT_THEMES: list[dict] = [
             },
         },
     },
+    {
+        "name": "Modern Smooth",
+        "slug": "modern-smooth",
+        "description": "Soft surfaces, polished spacing, and calmer component blocks",
+        "is_default": False,
+        "company_name": "Atlas IoT Studio",
+        "palette": {
+            "primary_color": "#154A78",
+            "secondary_color": "#52606D",
+            "accent_color": "#2A9D8F",
+            "background_color": "#F4F7FB",
+            "surface_color": "#EAF1F7",
+            "muted_color": "#C7D5E3",
+        },
+        "markdown_preset": "smooth",
+        "advanced": {
+            "typography": {
+                "font_family": "Helvetica",
+                "font_size_body": 11,
+                "font_size_heading": 22,
+                "line_spacing": 1.45,
+            },
+            "layout": {
+                "page_size": "A4",
+                "margin_top": 84.0,
+                "margin_bottom": 72.0,
+                "margin_left": 72.0,
+                "margin_right": 72.0,
+                "columns": 1,
+            },
+            "header": {
+                "enabled": True,
+                "text": "Atlas IoT Studio",
+                "align": "left",
+                "show_logo": False,
+                "divider": False,
+                "show_page_numbers": False,
+            },
+            "footer": {
+                "enabled": True,
+                "text": "Strategy Report",
+                "align": "right",
+                "show_logo": False,
+                "divider": False,
+                "show_page_numbers": True,
+            },
+        },
+    },
 ]
 
 
 async def seed_themes() -> None:
-    if await Theme.find_one() is not None:
-        return
     for data in DEFAULT_THEMES:
-        await Theme(**data).insert()
+        existing = await Theme.find_one(Theme.slug == data["slug"])
+        if existing is None:
+            await Theme(**data).insert()

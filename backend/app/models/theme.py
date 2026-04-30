@@ -139,7 +139,9 @@ class Theme(Document):
     company_name: str = ""
     logo: LogoAsset | None = None
     palette: PaletteSettings = Field(default_factory=PaletteSettings)
-    markdown_preset: Literal["enterprise", "executive", "minimal"] = "enterprise"
+    markdown_preset: Literal["enterprise", "executive", "minimal", "smooth"] = (
+        "enterprise"
+    )
     advanced: AdvancedTemplateSettings = Field(default_factory=AdvancedTemplateSettings)
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
