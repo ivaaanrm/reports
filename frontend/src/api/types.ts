@@ -145,3 +145,14 @@ export interface ThemeCreate {
   markdown_preset?: MarkdownPreset
   advanced?: AdvancedTemplateSettings
 }
+
+export interface ThemeUpdate {
+  name?: string
+  description?: string
+  is_default?: boolean
+  company_name?: string
+  logo?: LogoAsset | null
+  palette?: PaletteSettings
+  markdown_preset?: MarkdownPreset
+  advanced?: AdvancedTemplateSettings
+}

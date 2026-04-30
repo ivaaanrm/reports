@@ -22,7 +22,9 @@ function DownloadIcon() {
 export default function App() {
   const [view, setView] = useState<View>('generate')
   const [markdownFile, setMarkdownFile] = useState<File | null>(null)
-  const [selectedThemeSlug, setSelectedThemeSlug] = useState<string | null>(null)
+  const [selectedTheme, setSelectedTheme] = useState<Theme | null>(null)
+  const [editingTheme, setEditingTheme] = useState<Theme | null>(null)
+  const [templateListKey, setTemplateListKey] = useState(0)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +49,7 @@ export default function App() {
     setPage(1)
     setNumPages(null)
 
-    if (!markdownFile || !selectedThemeSlug) {
+    if (!markdownFile || !selectedTheme) {
       setLoading(false)
       return
     }
@@ -55,7 +57,7 @@ export default function App() {
     const controller = new AbortController()
     setLoading(true)
 
-    void generatePDF(markdownFile, selectedThemeSlug, controller.signal)
+    void generatePDF(markdownFile, selectedTheme.slug, controller.signal)
       .then((url) => {
         pdfUrlRef.current = url
         setPdfUrl(url)
@@ -69,16 +71,32 @@ export default function App() {
       })
 
     return () => controller.abort()
-  }, [markdownFile, selectedThemeSlug])
+  }, [markdownFile, selectedTheme])
 
-  function handleTemplateCreated(theme: Theme) {
-    setSelectedThemeSlug(theme.slug)
+  function handleSelectTheme(theme: Theme) {
+    setSelectedTheme(theme)
+  }
+
+  function handleNewTemplate() {
+    setEditingTheme(null)
+    setView('studio')
+  }
+
+  function handleOpenStudio() {
+    if (!selectedTheme) return
+    setEditingTheme(selectedTheme)
+    setView('studio')
+  }
+
+  function handleSaved(theme: Theme) {
+    setSelectedTheme(theme)
+    setTemplateListKey((k) => k + 1)
     setView('generate')
   }
 
   return (
     <div className="flex h-screen flex-col bg-[radial-gradient(ellipse_at_top,_rgba(14,165,233,0.07),_transparent_50%),linear-gradient(180deg,_#f8fbff_0%,_#f0f4fa_100%)]">
-      {/* Top navbar — consistent across views */}
+      {/* Consistent top navbar */}
       <header className="flex h-12 flex-shrink-0 items-center border-b border-slate-200/60 bg-white/90 px-6 backdrop-blur-sm">
         <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sky-600">Reports</p>
         <span className="mx-3 h-3.5 w-px bg-slate-200" />
@@ -90,18 +108,29 @@ export default function App() {
         </span>
       </header>
 
-      {/* View content — full width, scrollable, clears the floating HUD */}
-      <div className="flex-1 overflow-y-auto pb-24">
+      {/* Body — fills remaining height */}
+      <div className="flex flex-1 overflow-hidden">
         {view === 'generate' ? (
-          <div className="p-6 lg:p-8">
-            {/* Template selection in wrapping rows */}
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.28em] text-slate-400">
-              Template
-            </p>
-            <ThemePicker selectedSlug={selectedThemeSlug} onSelect={setSelectedThemeSlug} />
+          <>
+            {/* Left panel: vertical template list */}
+            <aside className="flex w-48 flex-shrink-0 flex-col border-r border-slate-200/60 bg-white/80 backdrop-blur-sm">
+              <div className="px-4 pt-4 pb-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-400">
+                  Templates
+                </p>
+              </div>
+              <div className="flex-1 overflow-y-auto px-3 pb-4">
+                <ThemePicker
+                  key={templateListKey}
+                  selectedTheme={selectedTheme}
+                  onSelect={handleSelectTheme}
+                  onNewTemplate={handleNewTemplate}
+                />
+              </div>
+            </aside>
 
-            {/* PDF area */}
-            <div className="mt-10">
+            {/* Main: PDF preview area */}
+            <main className="flex-1 overflow-y-auto pb-24 p-6 lg:p-8">
               {error && (
                 <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {error}
@@ -109,7 +138,7 @@ export default function App() {
               )}
 
               {loading && (
-                <div className="flex flex-col items-center gap-5 py-20">
+                <div className="flex flex-col items-center gap-5 py-24">
                   <div className="relative h-11 w-11">
                     <div className="absolute inset-0 rounded-full border-2 border-slate-100" />
                     <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-sky-400" />
@@ -126,7 +155,7 @@ export default function App() {
               )}
 
               {!loading && !pdfUrl && !error && (
-                <div className="flex flex-col items-center gap-4 py-20 text-center">
+                <div className="flex flex-col items-center gap-4 py-24 text-center">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-300 shadow-sm">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -143,14 +172,20 @@ export default function App() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
+            </main>
+          </>
         ) : (
-          <TemplateStudio onCreated={handleTemplateCreated} />
+          <div className="flex-1 overflow-y-auto pb-24">
+            <TemplateStudio
+              key={editingTheme?.slug ?? 'new'}
+              initialTheme={editingTheme}
+              onSaved={handleSaved}
+            />
+          </div>
         )}
       </div>
 
-      {/* Floating bottom HUD — centered, three pills */}
+      {/* Floating bottom HUD */}
       <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3">
         {/* Upload pill */}
         <div className="flex items-center gap-2 rounded-full border border-white/60 bg-white/90 px-4 py-2.5 shadow-[0_8px_32px_rgba(15,23,42,0.12)] backdrop-blur-xl">
@@ -158,7 +193,17 @@ export default function App() {
         </div>
 
         {/* View switcher */}
-        <Dock view={view} onViewChange={setView} />
+        <Dock
+          view={view}
+          canOpenStudio={!!selectedTheme}
+          onViewChange={(newView) => {
+            if (newView === 'studio') {
+              handleOpenStudio()
+            } else {
+              setView(newView)
+            }
+          }}
+        />
 
         {/* Pagination + download — only when PDF is loaded */}
         {pdfUrl && (

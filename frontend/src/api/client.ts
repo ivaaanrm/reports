@@ -1,4 +1,4 @@
-import type { Theme, ThemeCreate } from './types'
+import type { Theme, ThemeCreate, ThemeUpdate } from './types'
 
 const BASE = '/api'
 
@@ -16,6 +16,16 @@ export async function listThemes(): Promise<Theme[]> {
 export async function createTheme(data: ThemeCreate): Promise<Theme> {
   const res = await fetch(`${BASE}/themes/`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) await handleError(res)
+  return res.json()
+}
+
+export async function updateTheme(slug: string, data: ThemeUpdate): Promise<Theme> {
+  const res = await fetch(`${BASE}/themes/${slug}`, {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })

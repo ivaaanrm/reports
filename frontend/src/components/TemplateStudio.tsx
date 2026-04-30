@@ -5,8 +5,8 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from 'react'
-import { useEffect, useState } from 'react'
-import { createTheme, listThemes } from '../api/client'
+import { useState } from 'react'
+import { createTheme, updateTheme } from '../api/client'
 import type {
   AdvancedTemplateSettings,
   Alignment,
@@ -405,31 +405,51 @@ function PresetCard({
   )
 }
 
-export default function TemplateStudio({ onCreated }: { onCreated: (theme: Theme) => void }) {
-  const [draft, setDraft] = useState<TemplateDraft>(() => createInitialDraft())
-  const [templates, setTemplates] = useState<Theme[]>([])
-  const [loadingTemplates, setLoadingTemplates] = useState(true)
+function findPalettePresetId(palette: PaletteSettings): string {
+  const match = palettePresets.find(
+    (p) =>
+      p.palette.primary_color === palette.primary_color &&
+      p.palette.secondary_color === palette.secondary_color &&
+      p.palette.accent_color === palette.accent_color,
+  )
+  return match?.id ?? 'custom'
+}
+
+function createDraftFromTheme(theme: Theme): TemplateDraft {
+  return {
+    name: theme.name,
+    slug: theme.slug,
+    description: theme.description,
+    is_default: theme.is_default,
+    company_name: theme.company_name,
+    logo: theme.logo,
+    palette: theme.palette,
+    markdown_preset: theme.markdown_preset,
+    advanced: theme.advanced,
+  }
+}
+
+export default function TemplateStudio({
+  initialTheme,
+  onSaved,
+}: {
+  initialTheme: Theme | null
+  onSaved: (theme: Theme) => void
+}) {
+  const isEditMode = initialTheme !== null
+  const [draft, setDraft] = useState<TemplateDraft>(() =>
+    isEditMode ? createDraftFromTheme(initialTheme) : createInitialDraft(),
+  )
   const [submitting, setSubmitting] = useState(false)
   const [slugTouched, setSlugTouched] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [selectedPaletteId, setSelectedPaletteId] = useState<string>(palettePresets[0].id)
-  const [showCustomPalette, setShowCustomPalette] = useState(false)
-
-  useEffect(() => {
-    void refreshTemplates()
-  }, [])
-
-  async function refreshTemplates() {
-    setLoadingTemplates(true)
-    try {
-      setTemplates(await listThemes())
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not load templates')
-    } finally {
-      setLoadingTemplates(false)
-    }
-  }
+  const [selectedPaletteId, setSelectedPaletteId] = useState<string>(() =>
+    isEditMode ? findPalettePresetId(initialTheme.palette) : palettePresets[0].id,
+  )
+  const [showCustomPalette, setShowCustomPalette] = useState(
+    () => isEditMode && findPalettePresetId(initialTheme.palette) === 'custom',
+  )
 
   function updateField<K extends keyof TemplateDraft>(key: K, value: TemplateDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }))
@@ -601,14 +621,20 @@ export default function TemplateStudio({ onCreated }: { onCreated: (theme: Theme
     setSuccess(null)
 
     try {
-      const created = await createTheme(draft)
-      onCreated(created)
-      setSuccess(`Template "${created.name}" is saved and ready to use in Generate Reports.`)
-      setDraft(createInitialDraft())
-      setSlugTouched(false)
-      setSelectedPaletteId(palettePresets[0].id)
-      setShowCustomPalette(false)
-      await refreshTemplates()
+      let saved: Theme
+      if (isEditMode) {
+        const { slug: _slug, ...updateData } = draft
+        saved = await updateTheme(initialTheme.slug, updateData)
+        setSuccess(`"${saved.name}" updated.`)
+      } else {
+        saved = await createTheme(draft)
+        setSuccess(`"${saved.name}" saved.`)
+        setDraft(createInitialDraft())
+        setSlugTouched(false)
+        setSelectedPaletteId(palettePresets[0].id)
+        setShowCustomPalette(false)
+      }
+      onSaved(saved)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not save the template')
     } finally {
@@ -621,18 +647,18 @@ export default function TemplateStudio({ onCreated }: { onCreated: (theme: Theme
 
   return (
     <div className="mx-auto max-w-7xl p-6 lg:p-8">
-      <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">
-            Template Studio
-          </p>
-          <h1 className="mt-2 font-['Iowan_Old_Style','Palatino_Linotype',serif] text-4xl text-slate-950">
-            Build a reusable enterprise report template
-          </h1>
+      <div className="mb-8">
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">
+          Template Studio
+        </p>
+        <h1 className="mt-2 font-['Iowan_Old_Style','Palatino_Linotype',serif] text-4xl text-slate-950">
+          {isEditMode ? `Editing "${initialTheme.name}"` : 'New template'}
+        </h1>
+        {!isEditMode && (
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
             Keep the primary decisions simple, and tuck layout, typography, page chrome, and detailed overrides into compact advanced settings.
           </p>
-        </div>
+        )}
       </div>
 
       {error && (
@@ -664,10 +690,16 @@ export default function TemplateStudio({ onCreated }: { onCreated: (theme: Theme
                   }}
                 />
               </Field>
-              <Field label="Slug" hint="Unique key used by the API and PDF generator.">
+              <Field
+                label="Slug"
+                hint={isEditMode ? 'Slug is immutable after creation.' : 'Unique key used by the API and PDF generator.'}
+              >
                 <TextInput
                   value={draft.slug}
+                  readOnly={isEditMode}
+                  className={isEditMode ? 'cursor-default opacity-60' : ''}
                   onChange={(e) => {
+                    if (isEditMode) return
                     setSlugTouched(true)
                     updateField('slug', slugify(e.target.value))
                   }}
@@ -1427,22 +1459,26 @@ export default function TemplateStudio({ onCreated }: { onCreated: (theme: Theme
               disabled={submitting}
               className="inline-flex h-12 items-center justify-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitting ? 'Saving template…' : 'Save Template'}
+              {submitting
+                ? isEditMode ? 'Updating…' : 'Saving…'
+                : isEditMode ? 'Update Template' : 'Save Template'}
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDraft(createInitialDraft())
-                setSlugTouched(false)
-                setSuccess(null)
-                setError(null)
-                setSelectedPaletteId(palettePresets[0].id)
-                setShowCustomPalette(false)
-              }}
-              className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-            >
-              Reset
-            </button>
+            {!isEditMode && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(createInitialDraft())
+                  setSlugTouched(false)
+                  setSuccess(null)
+                  setError(null)
+                  setSelectedPaletteId(palettePresets[0].id)
+                  setShowCustomPalette(false)
+                }}
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+              >
+                Reset
+              </button>
+            )}
           </div>
         </form>
 
@@ -1657,51 +1693,6 @@ export default function TemplateStudio({ onCreated }: { onCreated: (theme: Theme
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-['Iowan_Old_Style','Palatino_Linotype',serif] text-2xl text-slate-900">
-                  Saved Templates
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Your template library updates as soon as you save.
-                </p>
-              </div>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                {templates.length}
-              </span>
-            </div>
-
-            <div className="mt-4 grid gap-3">
-              {loadingTemplates ? (
-                <p className="text-sm text-slate-400">Loading templates…</p>
-              ) : templates.length ? (
-                templates.map((template) => (
-                  <div
-                    key={template.slug}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="h-4 w-4 rounded-full border border-white shadow-sm"
-                        style={{ backgroundColor: template.palette.primary_color }}
-                      />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-800">
-                          {template.name}
-                        </p>
-                        <p className="truncate text-xs text-slate-500">
-                          {template.company_name || template.slug}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-400">No templates saved yet.</p>
-              )}
-            </div>
-          </section>
         </aside>
       </div>
     </div>

@@ -3,6 +3,7 @@ type View = 'generate' | 'studio'
 interface Props {
   view: View
   onViewChange: (view: View) => void
+  canOpenStudio: boolean
 }
 
 function GenerateIcon() {
@@ -27,7 +28,7 @@ function StudioIcon() {
   )
 }
 
-export default function Dock({ view, onViewChange }: Props) {
+export default function Dock({ view, onViewChange, canOpenStudio }: Props) {
   return (
     <div className="flex items-center gap-1 rounded-full border border-white/60 bg-white/90 p-1.5 shadow-[0_8px_32px_rgba(15,23,42,0.12)] backdrop-blur-xl">
       <button
@@ -42,12 +43,15 @@ export default function Dock({ view, onViewChange }: Props) {
         <GenerateIcon />
       </button>
       <button
-        onClick={() => onViewChange('studio')}
-        title="Template Studio"
+        onClick={() => canOpenStudio && onViewChange('studio')}
+        title={canOpenStudio ? 'Edit selected template' : 'Select a template to open Studio'}
+        disabled={!canOpenStudio}
         className={`flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 ${
           view === 'studio'
             ? 'bg-slate-950 text-white shadow-sm'
-            : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
+            : canOpenStudio
+              ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
+              : 'cursor-not-allowed text-slate-300'
         }`}
       >
         <StudioIcon />
