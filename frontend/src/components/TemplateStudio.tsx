@@ -253,35 +253,54 @@ function readFileAsDataUrl(file: File): Promise<string> {
   })
 }
 
+// ─── Design-system primitives ────────────────────────────────────────────────
+
 function CollapsibleSection({
   title,
   subtitle,
+  icon,
   defaultOpen = false,
   children,
 }: {
   title: string
   subtitle: string
+  icon: ReactNode
   defaultOpen?: boolean
   children: ReactNode
 }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
   return (
-    <details
-      open={defaultOpen}
-      className="group rounded-[28px] border border-slate-200/80 bg-white/90 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur"
-    >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5">
-        <div>
-          <h2 className="font-['Iowan_Old_Style','Palatino_Linotype',serif] text-xl text-slate-900">
+    <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex w-full items-start gap-3 px-6 py-5 text-left"
+      >
+        <span className="mt-0.5 shrink-0 text-slate-400">{icon}</span>
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-semibold uppercase tracking-wide text-slate-800">
             {title}
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+          </span>
+          <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>
         </div>
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 transition group-open:rotate-0">
-          Toggle
-        </span>
-      </summary>
-      <div className="border-t border-slate-100 px-6 py-6">{children}</div>
-    </details>
+        <svg
+          className={`mt-1 h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+      <div
+        className={`grid transition-all duration-200 ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-slate-100 px-6 py-6">{children}</div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -295,21 +314,22 @@ function Field({
   children: ReactNode
 }) {
   return (
-    <label className="flex flex-col gap-2">
-      <span className="text-sm font-medium text-slate-700">{label}</span>
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-slate-500">{label}</span>
       {children}
       {hint && <span className="text-xs text-slate-400">{hint}</span>}
     </label>
   )
 }
 
+const inputBase =
+  'h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-transparent focus:ring-2 focus:ring-sky-500'
+
 function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`h-11 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-sky-100 ${
-        props.className ?? ''
-      }`}
+      className={`${inputBase} ${props.className ?? ''}`}
     />
   )
 }
@@ -318,9 +338,7 @@ function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
       {...props}
-      className={`min-h-[110px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-sky-100 ${
-        props.className ?? ''
-      }`}
+      className={`min-h-[88px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-transparent focus:ring-2 focus:ring-sky-500 ${props.className ?? ''}`}
     />
   )
 }
@@ -329,10 +347,33 @@ function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className={`h-11 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-sky-100 ${
-        props.className ?? ''
-      }`}
+      className={`${inputBase} ${props.className ?? ''}`}
     />
+  )
+}
+
+function ColorInput({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 transition focus-within:border-transparent focus-within:ring-2 focus-within:ring-sky-500">
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
+      />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-20 bg-transparent text-sm text-slate-800 outline-none"
+      />
+    </div>
   )
 }
 
@@ -348,18 +389,19 @@ function Toggle({
   return (
     <button
       type="button"
+      aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`flex h-11 items-center justify-between rounded-2xl border px-4 text-sm transition ${
-        checked
-          ? 'border-sky-200 bg-sky-50 text-sky-800'
-          : 'border-slate-200 bg-slate-50 text-slate-500'
-      }`}
+      className="flex h-9 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 transition hover:bg-slate-50"
     >
-      <span>{label}</span>
-      <span className={`h-6 w-11 rounded-full p-1 ${checked ? 'bg-sky-500' : 'bg-slate-300'}`}>
+      <span className="text-sm text-slate-600">{label}</span>
+      <span
+        className={`relative flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-150 ${
+          checked ? 'bg-sky-500' : 'bg-slate-200'
+        }`}
+      >
         <span
-          className={`block h-4 w-4 rounded-full bg-white transition ${
-            checked ? 'translate-x-5' : 'translate-x-0'
+          className={`absolute h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-150 ${
+            checked ? 'translate-x-[18px]' : 'translate-x-0.5'
           }`}
         />
       </span>
@@ -384,26 +426,63 @@ function PresetCard({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-[24px] border p-4 text-left transition ${
+      className={`rounded-xl border p-4 text-left transition ${
         selected
-          ? 'border-sky-400 bg-sky-50 shadow-[0_12px_28px_rgba(14,165,233,0.12)]'
-          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+          ? 'border-sky-200 bg-sky-50 ring-2 ring-sky-500'
+          : 'border-slate-200 bg-white ring-1 ring-slate-200 hover:ring-slate-300'
       }`}
     >
-      <div className="flex gap-2">
+      <div className="flex gap-1.5">
         {swatches.map((swatch) => (
           <span
             key={swatch}
-            className="h-8 w-8 rounded-full border border-white shadow-sm"
+            className="h-6 w-6 rounded-full border border-white shadow-sm"
             style={{ backgroundColor: swatch }}
           />
         ))}
       </div>
-      <h3 className="mt-4 text-sm font-semibold text-slate-800">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+      <h3 className="mt-3 text-sm font-medium text-slate-700">{title}</h3>
+      <p className="mt-0.5 text-xs leading-5 text-slate-500">{description}</p>
     </button>
   )
 }
+
+// ─── Section icons ────────────────────────────────────────────────────────────
+
+function IconBrand() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function IconPalette() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path fillRule="evenodd" d="M2.25 4.125c0-1.036.84-1.875 1.875-1.875h5.25c1.036 0 1.875.84 1.875 1.875V17.25a4.5 4.5 0 1 1-9 0V4.125Zm4.5 14.25a1.125 1.125 0 1 0 0-2.25 1.125 1.125 0 0 0 0 2.25Z" clipRule="evenodd" />
+      <path d="M10.719 21.75h9.156c1.036 0 1.875-.84 1.875-1.875v-5.25c0-1.036-.84-1.875-1.875-1.875h-.14l-8.742 8.743c-.09.089-.18.173-.274.257ZM12.738 17.625l6.474-6.474a1.875 1.875 0 0 0 0-2.651L15.5 4.787a1.875 1.875 0 0 0-2.651 0l-.1.099V17.25c0 .126-.003.251-.01.375Z" />
+    </svg>
+  )
+}
+
+function IconText() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path fillRule="evenodd" d="M2.625 6.75a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0A.75.75 0 0 1 8.25 6h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75ZM2.625 12a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0ZM7.5 12a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12A.75.75 0 0 1 7.5 12Zm-4.875 5.25a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function IconSliders() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path d="M18.75 12.75h1.5a.75.75 0 0 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM12 6a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 6ZM12 18a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 18ZM3.75 6.75h1.5a.75.75 0 1 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM5.25 18.75h-1.5a.75.75 0 0 1 0-1.5h1.5a.75.75 0 0 1 0 1.5ZM3 12a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 3 12ZM9 3.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM12.75 12a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0ZM9 15.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
+    </svg>
+  )
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function findPalettePresetId(palette: PaletteSettings): string {
   const match = palettePresets.find(
@@ -428,6 +507,8 @@ function createDraftFromTheme(theme: Theme): TemplateDraft {
     advanced: theme.advanced,
   }
 }
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TemplateStudio({
   initialTheme,
@@ -662,21 +743,24 @@ export default function TemplateStudio({
       </div>
 
       {error && (
-        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       )}
       {success && (
-        <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           {success}
         </div>
       )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_360px]">
-        <form className="grid gap-6" onSubmit={handleSubmit}>
+        <form className="grid gap-4" onSubmit={handleSubmit}>
+
+          {/* ── Brand ──────────────────────────────────────────────── */}
           <CollapsibleSection
             title="Brand"
-            subtitle="Core identity for the template. This section starts open."
+            subtitle="Name, slug, company identity and logo."
+            icon={<IconBrand />}
             defaultOpen
           >
             <div className="grid gap-4 md:grid-cols-2">
@@ -692,7 +776,11 @@ export default function TemplateStudio({
               </Field>
               <Field
                 label="Slug"
-                hint={isEditMode ? 'Slug is immutable after creation.' : 'Unique key used by the API and PDF generator.'}
+                hint={
+                  isEditMode
+                    ? 'Slug is immutable after creation.'
+                    : 'Unique key used by the API and PDF generator.'
+                }
               >
                 <TextInput
                   value={draft.slug}
@@ -721,9 +809,9 @@ export default function TemplateStudio({
                 label="Company Logo"
                 hint="PNG or JPEG, stored directly in Mongo as embedded data."
               >
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <label className="inline-flex h-11 cursor-pointer items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-medium text-white transition hover:bg-slate-800">
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                  <div className="flex flex-wrap gap-2">
+                    <label className="inline-flex h-9 cursor-pointer items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800">
                       Choose Logo
                       <input
                         type="file"
@@ -739,22 +827,22 @@ export default function TemplateStudio({
                       onClick={() => {
                         void handleLogoChange(null)
                       }}
-                      className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 px-5 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:bg-white"
+                      className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
                     >
-                      Remove Logo
+                      Remove
                     </button>
                   </div>
                   {draft.logo ? (
-                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
                       <img
                         src={draft.logo.data}
                         alt="Logo preview"
-                        className="h-16 w-auto object-contain"
+                        className="h-12 w-auto object-contain"
                       />
-                      <p className="mt-3 text-xs text-slate-400">{draft.logo.file_name}</p>
+                      <p className="mt-2 text-xs text-slate-400">{draft.logo.file_name}</p>
                     </div>
                   ) : (
-                    <p className="mt-4 text-sm text-slate-400">
+                    <p className="mt-3 text-xs text-slate-400">
                       Add a logo to reuse the same brand mark in headers and footers.
                     </p>
                   )}
@@ -779,11 +867,13 @@ export default function TemplateStudio({
             </div>
           </CollapsibleSection>
 
+          {/* ── Palette ────────────────────────────────────────────── */}
           <CollapsibleSection
             title="Palette"
-            subtitle="Choose from ready-made palettes or open custom editing for a personalized one."
+            subtitle="Colors and visual theme."
+            icon={<IconPalette />}
           >
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-3 lg:grid-cols-2">
               {palettePresets.map((preset) => (
                 <PresetCard
                   key={preset.id}
@@ -801,72 +891,68 @@ export default function TemplateStudio({
               ))}
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => {
                   setSelectedPaletteId('custom')
                   setShowCustomPalette((current) => !current)
                 }}
-                className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
-                {showCustomPalette ? 'Hide Personalized Palette' : 'Create Personalized Palette'}
+                {showCustomPalette ? 'Hide Custom Palette' : 'Create Custom Palette'}
               </button>
             </div>
 
             {showCustomPalette && (
-              <div className="mt-5 grid gap-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4 md:grid-cols-2 lg:grid-cols-3">
-                <Field label="Primary Color">
-                  <TextInput
-                    type="color"
+              <div className="mt-4 grid gap-4 rounded-xl bg-slate-50 p-4 md:grid-cols-2 lg:grid-cols-3">
+                <Field label="Primary">
+                  <ColorInput
                     value={draft.palette.primary_color}
-                    onChange={(e) => updatePalette('primary_color', e.target.value)}
+                    onChange={(v) => updatePalette('primary_color', v)}
                   />
                 </Field>
-                <Field label="Secondary Color">
-                  <TextInput
-                    type="color"
+                <Field label="Secondary">
+                  <ColorInput
                     value={draft.palette.secondary_color}
-                    onChange={(e) => updatePalette('secondary_color', e.target.value)}
+                    onChange={(v) => updatePalette('secondary_color', v)}
                   />
                 </Field>
-                <Field label="Accent Color">
-                  <TextInput
-                    type="color"
+                <Field label="Accent">
+                  <ColorInput
                     value={draft.palette.accent_color}
-                    onChange={(e) => updatePalette('accent_color', e.target.value)}
+                    onChange={(v) => updatePalette('accent_color', v)}
                   />
                 </Field>
-                <Field label="Background Color">
-                  <TextInput
-                    type="color"
+                <Field label="Background">
+                  <ColorInput
                     value={draft.palette.background_color}
-                    onChange={(e) => updatePalette('background_color', e.target.value)}
+                    onChange={(v) => updatePalette('background_color', v)}
                   />
                 </Field>
-                <Field label="Surface Color">
-                  <TextInput
-                    type="color"
+                <Field label="Surface">
+                  <ColorInput
                     value={draft.palette.surface_color}
-                    onChange={(e) => updatePalette('surface_color', e.target.value)}
+                    onChange={(v) => updatePalette('surface_color', v)}
                   />
                 </Field>
-                <Field label="Muted Color">
-                  <TextInput
-                    type="color"
+                <Field label="Muted">
+                  <ColorInput
                     value={draft.palette.muted_color}
-                    onChange={(e) => updatePalette('muted_color', e.target.value)}
+                    onChange={(v) => updatePalette('muted_color', v)}
                   />
                 </Field>
               </div>
             )}
           </CollapsibleSection>
 
+          {/* ── Markdown Presets ───────────────────────────────────── */}
           <CollapsibleSection
-            title="Markdown Components Presets"
-            subtitle="Choose the overall markdown styling direction. Fine-tuning lives in Advanced Configurations."
+            title="Markdown Presets"
+            subtitle="Typography style across all markdown elements."
+            icon={<IconText />}
           >
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-3">
               <PresetCard
                 selected={draft.markdown_preset === 'enterprise'}
                 title="Enterprise"
@@ -906,562 +992,519 @@ export default function TemplateStudio({
             </div>
           </CollapsibleSection>
 
+          {/* ── Advanced ───────────────────────────────────────────── */}
           <CollapsibleSection
-            title="Advanced Configurations"
-            subtitle="Typography, layout, page chrome, and detailed markdown overrides are grouped here."
+            title="Advanced"
+            subtitle="Typography, layout, page chrome, and markdown overrides."
+            icon={<IconSliders />}
           >
-            <div className="grid gap-6">
-              <div className="grid gap-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4 lg:grid-cols-2">
-                <div>
-                  <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Typography & Layout
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Field label="Font Family">
+            {/* Typography & Layout */}
+            <p className="mb-4 text-sm font-medium text-slate-700">Typography &amp; Layout</p>
+            <div className="grid gap-4">
+              <div className="grid gap-4 rounded-xl bg-slate-50 p-4 sm:grid-cols-2">
+                <Field label="Font Family">
+                  <Select
+                    value={draft.advanced.typography.font_family}
+                    onChange={(e) => updateTypography('font_family', e.target.value)}
+                  >
+                    {fontOptions.map((font) => (
+                      <option key={font} value={font}>
+                        {font}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Page Size">
+                  <Select
+                    value={draft.advanced.layout.page_size}
+                    onChange={(e) => updateLayout('page_size', e.target.value)}
+                  >
+                    <option value="A4">A4</option>
+                    <option value="LETTER">Letter</option>
+                  </Select>
+                </Field>
+                <Field label="Body Font Size">
+                  <TextInput
+                    type="number"
+                    min={9}
+                    max={16}
+                    value={draft.advanced.typography.font_size_body}
+                    onChange={(e) =>
+                      updateTypography('font_size_body', Number(e.target.value))
+                    }
+                  />
+                </Field>
+                <Field label="Heading Font Size">
+                  <TextInput
+                    type="number"
+                    min={16}
+                    max={32}
+                    value={draft.advanced.typography.font_size_heading}
+                    onChange={(e) =>
+                      updateTypography('font_size_heading', Number(e.target.value))
+                    }
+                  />
+                </Field>
+                <Field label="Line Spacing">
+                  <TextInput
+                    type="number"
+                    step="0.05"
+                    min={1}
+                    max={1.8}
+                    value={draft.advanced.typography.line_spacing}
+                    onChange={(e) =>
+                      updateTypography('line_spacing', Number(e.target.value))
+                    }
+                  />
+                </Field>
+                <Field label="Columns">
+                  <TextInput
+                    type="number"
+                    min={1}
+                    max={2}
+                    value={draft.advanced.layout.columns}
+                    onChange={(e) => updateLayout('columns', Number(e.target.value))}
+                  />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-4 rounded-xl bg-slate-50 p-4">
+                <Field label="Top Margin">
+                  <TextInput
+                    type="number"
+                    min={36}
+                    max={144}
+                    value={draft.advanced.layout.margin_top}
+                    onChange={(e) => updateLayout('margin_top', Number(e.target.value))}
+                  />
+                </Field>
+                <Field label="Bottom Margin">
+                  <TextInput
+                    type="number"
+                    min={36}
+                    max={144}
+                    value={draft.advanced.layout.margin_bottom}
+                    onChange={(e) => updateLayout('margin_bottom', Number(e.target.value))}
+                  />
+                </Field>
+                <Field label="Left Margin">
+                  <TextInput
+                    type="number"
+                    min={36}
+                    max={144}
+                    value={draft.advanced.layout.margin_left}
+                    onChange={(e) => updateLayout('margin_left', Number(e.target.value))}
+                  />
+                </Field>
+                <Field label="Right Margin">
+                  <TextInput
+                    type="number"
+                    min={36}
+                    max={144}
+                    value={draft.advanced.layout.margin_right}
+                    onChange={(e) => updateLayout('margin_right', Number(e.target.value))}
+                  />
+                </Field>
+              </div>
+            </div>
+
+            {/* Page Chrome */}
+            <div className="mt-8 border-t border-slate-100 pt-6">
+              <p className="mb-4 text-sm font-medium text-slate-700">Page Chrome</p>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Header
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Enabled">
+                      <Toggle
+                        checked={draft.advanced.header.enabled}
+                        onChange={(next) => updateHeader('enabled', next)}
+                        label="Show header"
+                      />
+                    </Field>
+                    <Field label="Alignment">
                       <Select
-                        value={draft.advanced.typography.font_family}
-                        onChange={(e) => updateTypography('font_family', e.target.value)}
+                        value={draft.advanced.header.align}
+                        onChange={(e) => updateHeader('align', e.target.value as Alignment)}
                       >
-                        {fontOptions.map((font) => (
-                          <option key={font} value={font}>
-                            {font}
+                        {alignOptions.map((value) => (
+                          <option key={value} value={value}>
+                            {value}
                           </option>
                         ))}
                       </Select>
                     </Field>
-                    <Field label="Page Size">
+                    <Field label="Header Text">
+                      <TextInput
+                        value={draft.advanced.header.text ?? ''}
+                        onChange={(e) => updateHeader('text', e.target.value || null)}
+                      />
+                    </Field>
+                    <Field label="Logo in Header">
+                      <Toggle
+                        checked={draft.advanced.header.show_logo}
+                        onChange={(next) => updateHeader('show_logo', next)}
+                        label="Render logo"
+                      />
+                    </Field>
+                    <Field label="Divider">
+                      <Toggle
+                        checked={draft.advanced.header.divider}
+                        onChange={(next) => updateHeader('divider', next)}
+                        label="Draw divider"
+                      />
+                    </Field>
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Footer
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Enabled">
+                      <Toggle
+                        checked={draft.advanced.footer.enabled}
+                        onChange={(next) => updateFooter('enabled', next)}
+                        label="Show footer"
+                      />
+                    </Field>
+                    <Field label="Alignment">
                       <Select
-                        value={draft.advanced.layout.page_size}
-                        onChange={(e) => updateLayout('page_size', e.target.value)}
+                        value={draft.advanced.footer.align}
+                        onChange={(e) => updateFooter('align', e.target.value as Alignment)}
                       >
-                        <option value="A4">A4</option>
-                        <option value="LETTER">Letter</option>
+                        {alignOptions.map((value) => (
+                          <option key={value} value={value}>
+                            {value}
+                          </option>
+                        ))}
                       </Select>
+                    </Field>
+                    <Field label="Footer Text">
+                      <TextInput
+                        value={draft.advanced.footer.text ?? ''}
+                        onChange={(e) => updateFooter('text', e.target.value || null)}
+                      />
+                    </Field>
+                    <Field label="Logo in Footer">
+                      <Toggle
+                        checked={draft.advanced.footer.show_logo}
+                        onChange={(next) => updateFooter('show_logo', next)}
+                        label="Render logo"
+                      />
+                    </Field>
+                    <Field label="Divider">
+                      <Toggle
+                        checked={draft.advanced.footer.divider}
+                        onChange={(next) => updateFooter('divider', next)}
+                        label="Draw divider"
+                      />
+                    </Field>
+                    <Field label="Page Numbers">
+                      <Toggle
+                        checked={draft.advanced.footer.show_page_numbers}
+                        onChange={(next) => updateFooter('show_page_numbers', next)}
+                        label="Show page numbers"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Markdown Overrides */}
+            <div className="mt-8 border-t border-slate-100 pt-6">
+              <p className="mb-4 text-sm font-medium text-slate-700">Markdown Overrides</p>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                {(['h1', 'h2', 'h3', 'h4'] as const).map((level) => (
+                  <div key={level} className="rounded-xl bg-slate-50 p-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      {level.toUpperCase()}
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="Color">
+                        <ColorInput
+                          value={
+                            draft.advanced.markdown_styles.headings[level].color ?? '#000000'
+                          }
+                          onChange={(v) => updateHeading(level, 'color', v)}
+                        />
+                      </Field>
+                      <Field label="Font Size">
+                        <TextInput
+                          type="number"
+                          value={
+                            draft.advanced.markdown_styles.headings[level].font_size ?? 0
+                          }
+                          onChange={(e) =>
+                            updateHeading(level, 'font_size', Number(e.target.value))
+                          }
+                        />
+                      </Field>
+                      <Field label="Space Before">
+                        <TextInput
+                          type="number"
+                          value={
+                            draft.advanced.markdown_styles.headings[level].space_before ?? 0
+                          }
+                          onChange={(e) =>
+                            updateHeading(level, 'space_before', Number(e.target.value))
+                          }
+                        />
+                      </Field>
+                      <Field label="Space After">
+                        <TextInput
+                          type="number"
+                          value={
+                            draft.advanced.markdown_styles.headings[level].space_after ?? 0
+                          }
+                          onChange={(e) =>
+                            updateHeading(level, 'space_after', Number(e.target.value))
+                          }
+                        />
+                      </Field>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Body &amp; Lists
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Body Color">
+                      <ColorInput
+                        value={draft.advanced.markdown_styles.body.color ?? '#000000'}
+                        onChange={(v) => updateMarkdownSection('body', 'color', v)}
+                      />
                     </Field>
                     <Field label="Body Font Size">
                       <TextInput
                         type="number"
-                        min={9}
-                        max={16}
-                        value={draft.advanced.typography.font_size_body}
+                        value={draft.advanced.markdown_styles.body.font_size ?? 0}
                         onChange={(e) =>
-                          updateTypography('font_size_body', Number(e.target.value))
+                          updateMarkdownSection('body', 'font_size', Number(e.target.value))
                         }
                       />
                     </Field>
-                    <Field label="Heading Font Size">
+                    <Field label="Paragraph Spacing">
                       <TextInput
                         type="number"
-                        min={16}
-                        max={32}
-                        value={draft.advanced.typography.font_size_heading}
+                        value={draft.advanced.markdown_styles.body.space_after ?? 0}
                         onChange={(e) =>
-                          updateTypography('font_size_heading', Number(e.target.value))
+                          updateMarkdownSection('body', 'space_after', Number(e.target.value))
                         }
                       />
                     </Field>
-                    <Field label="Line Spacing">
+                    <Field label="Bullet Color">
+                      <ColorInput
+                        value={draft.advanced.markdown_styles.lists.bullet_color ?? '#000000'}
+                        onChange={(v) => updateMarkdownSection('lists', 'bullet_color', v)}
+                      />
+                    </Field>
+                    <Field label="List Text Color">
+                      <ColorInput
+                        value={draft.advanced.markdown_styles.lists.text_color ?? '#000000'}
+                        onChange={(v) => updateMarkdownSection('lists', 'text_color', v)}
+                      />
+                    </Field>
+                    <Field label="Item Spacing">
                       <TextInput
                         type="number"
-                        step="0.05"
-                        min={1}
-                        max={1.8}
-                        value={draft.advanced.typography.line_spacing}
+                        value={draft.advanced.markdown_styles.lists.item_spacing ?? 0}
                         onChange={(e) =>
-                          updateTypography('line_spacing', Number(e.target.value))
+                          updateMarkdownSection('lists', 'item_spacing', Number(e.target.value))
                         }
-                      />
-                    </Field>
-                    <Field label="Columns">
-                      <TextInput
-                        type="number"
-                        min={1}
-                        max={2}
-                        value={draft.advanced.layout.columns}
-                        onChange={(e) => updateLayout('columns', Number(e.target.value))}
-                      />
-                    </Field>
-                    <Field label="Top Margin">
-                      <TextInput
-                        type="number"
-                        min={36}
-                        max={144}
-                        value={draft.advanced.layout.margin_top}
-                        onChange={(e) => updateLayout('margin_top', Number(e.target.value))}
-                      />
-                    </Field>
-                    <Field label="Bottom Margin">
-                      <TextInput
-                        type="number"
-                        min={36}
-                        max={144}
-                        value={draft.advanced.layout.margin_bottom}
-                        onChange={(e) =>
-                          updateLayout('margin_bottom', Number(e.target.value))
-                        }
-                      />
-                    </Field>
-                    <Field label="Left Margin">
-                      <TextInput
-                        type="number"
-                        min={36}
-                        max={144}
-                        value={draft.advanced.layout.margin_left}
-                        onChange={(e) => updateLayout('margin_left', Number(e.target.value))}
-                      />
-                    </Field>
-                    <Field label="Right Margin">
-                      <TextInput
-                        type="number"
-                        min={36}
-                        max={144}
-                        value={draft.advanced.layout.margin_right}
-                        onChange={(e) => updateLayout('margin_right', Number(e.target.value))}
                       />
                     </Field>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Page Chrome
-                  </h3>
-                  <div className="grid gap-4">
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <h4 className="mb-3 text-sm font-semibold text-slate-700">Header</h4>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <Field label="Enabled">
-                          <Toggle
-                            checked={draft.advanced.header.enabled}
-                            onChange={(next) => updateHeader('enabled', next)}
-                            label="Show header"
-                          />
-                        </Field>
-                        <Field label="Alignment">
-                          <Select
-                            value={draft.advanced.header.align}
-                            onChange={(e) => updateHeader('align', e.target.value as Alignment)}
-                          >
-                            {alignOptions.map((value) => (
-                              <option key={value} value={value}>
-                                {value}
-                              </option>
-                            ))}
-                          </Select>
-                        </Field>
-                        <Field label="Header Text">
-                          <TextInput
-                            value={draft.advanced.header.text ?? ''}
-                            onChange={(e) => updateHeader('text', e.target.value || null)}
-                          />
-                        </Field>
-                        <Field label="Logo in Header">
-                          <Toggle
-                            checked={draft.advanced.header.show_logo}
-                            onChange={(next) => updateHeader('show_logo', next)}
-                            label="Render logo"
-                          />
-                        </Field>
-                        <Field label="Divider">
-                          <Toggle
-                            checked={draft.advanced.header.divider}
-                            onChange={(next) => updateHeader('divider', next)}
-                            label="Draw divider"
-                          />
-                        </Field>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <h4 className="mb-3 text-sm font-semibold text-slate-700">Footer</h4>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <Field label="Enabled">
-                          <Toggle
-                            checked={draft.advanced.footer.enabled}
-                            onChange={(next) => updateFooter('enabled', next)}
-                            label="Show footer"
-                          />
-                        </Field>
-                        <Field label="Alignment">
-                          <Select
-                            value={draft.advanced.footer.align}
-                            onChange={(e) => updateFooter('align', e.target.value as Alignment)}
-                          >
-                            {alignOptions.map((value) => (
-                              <option key={value} value={value}>
-                                {value}
-                              </option>
-                            ))}
-                          </Select>
-                        </Field>
-                        <Field label="Footer Text">
-                          <TextInput
-                            value={draft.advanced.footer.text ?? ''}
-                            onChange={(e) => updateFooter('text', e.target.value || null)}
-                          />
-                        </Field>
-                        <Field label="Logo in Footer">
-                          <Toggle
-                            checked={draft.advanced.footer.show_logo}
-                            onChange={(next) => updateFooter('show_logo', next)}
-                            label="Render logo"
-                          />
-                        </Field>
-                        <Field label="Divider">
-                          <Toggle
-                            checked={draft.advanced.footer.divider}
-                            onChange={(next) => updateFooter('divider', next)}
-                            label="Draw divider"
-                          />
-                        </Field>
-                        <Field label="Page Numbers">
-                          <Toggle
-                            checked={draft.advanced.footer.show_page_numbers}
-                            onChange={(next) => updateFooter('show_page_numbers', next)}
-                            label="Show page numbers"
-                          />
-                        </Field>
-                      </div>
-                    </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Blockquotes &amp; Code
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Quote Border">
+                      <ColorInput
+                        value={
+                          draft.advanced.markdown_styles.blockquotes.border_color ?? '#000000'
+                        }
+                        onChange={(v) =>
+                          updateMarkdownSection('blockquotes', 'border_color', v)
+                        }
+                      />
+                    </Field>
+                    <Field label="Quote Surface">
+                      <ColorInput
+                        value={
+                          draft.advanced.markdown_styles.blockquotes.background_color ?? '#000000'
+                        }
+                        onChange={(v) =>
+                          updateMarkdownSection('blockquotes', 'background_color', v)
+                        }
+                      />
+                    </Field>
+                    <Field label="Quote Padding">
+                      <TextInput
+                        type="number"
+                        value={draft.advanced.markdown_styles.blockquotes.padding ?? 0}
+                        onChange={(e) =>
+                          updateMarkdownSection('blockquotes', 'padding', Number(e.target.value))
+                        }
+                      />
+                    </Field>
+                    <Field label="Code Surface">
+                      <ColorInput
+                        value={
+                          draft.advanced.markdown_styles.code.background_color ?? '#000000'
+                        }
+                        onChange={(v) =>
+                          updateMarkdownSection('code', 'background_color', v)
+                        }
+                      />
+                    </Field>
+                    <Field label="Code Border">
+                      <ColorInput
+                        value={draft.advanced.markdown_styles.code.border_color ?? '#000000'}
+                        onChange={(v) => updateMarkdownSection('code', 'border_color', v)}
+                      />
+                    </Field>
+                    <Field label="Code Padding">
+                      <TextInput
+                        type="number"
+                        value={draft.advanced.markdown_styles.code.padding ?? 0}
+                        onChange={(e) =>
+                          updateMarkdownSection('code', 'padding', Number(e.target.value))
+                        }
+                      />
+                    </Field>
                   </div>
                 </div>
-              </div>
 
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Detailed Markdown Overrides
-                </h3>
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {(['h1', 'h2', 'h3', 'h4'] as const).map((level) => (
-                    <div key={level} className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <h4 className="mb-3 text-sm font-semibold text-slate-700">
-                        {level.toUpperCase()}
-                      </h4>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Field label="Color">
-                          <TextInput
-                            type="color"
-                            value={
-                              draft.advanced.markdown_styles.headings[level].color ?? '#000000'
-                            }
-                            onChange={(e) => updateHeading(level, 'color', e.target.value)}
-                          />
-                        </Field>
-                        <Field label="Font Size">
-                          <TextInput
-                            type="number"
-                            value={
-                              draft.advanced.markdown_styles.headings[level].font_size ?? 0
-                            }
-                            onChange={(e) =>
-                              updateHeading(level, 'font_size', Number(e.target.value))
-                            }
-                          />
-                        </Field>
-                        <Field label="Space Before">
-                          <TextInput
-                            type="number"
-                            value={
-                              draft.advanced.markdown_styles.headings[level].space_before ?? 0
-                            }
-                            onChange={(e) =>
-                              updateHeading(level, 'space_before', Number(e.target.value))
-                            }
-                          />
-                        </Field>
-                        <Field label="Space After">
-                          <TextInput
-                            type="number"
-                            value={
-                              draft.advanced.markdown_styles.headings[level].space_after ?? 0
-                            }
-                            onChange={(e) =>
-                              updateHeading(level, 'space_after', Number(e.target.value))
-                            }
-                          />
-                        </Field>
-                      </div>
-                    </div>
-                  ))}
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Rules
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Rule Color">
+                      <ColorInput
+                        value={
+                          draft.advanced.markdown_styles.horizontal_rules.color ?? '#000000'
+                        }
+                        onChange={(v) =>
+                          updateMarkdownSection('horizontal_rules', 'color', v)
+                        }
+                      />
+                    </Field>
+                    <Field label="Thickness">
+                      <TextInput
+                        type="number"
+                        step="0.1"
+                        value={draft.advanced.markdown_styles.horizontal_rules.thickness ?? 0}
+                        onChange={(e) =>
+                          updateMarkdownSection(
+                            'horizontal_rules',
+                            'thickness',
+                            Number(e.target.value),
+                          )
+                        }
+                      />
+                    </Field>
+                  </div>
                 </div>
 
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <h4 className="mb-3 text-sm font-semibold text-slate-700">Body & Lists</h4>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Body Color">
-                        <TextInput
-                          type="color"
-                          value={draft.advanced.markdown_styles.body.color ?? '#000000'}
-                          onChange={(e) =>
-                            updateMarkdownSection('body', 'color', e.target.value)
-                          }
-                        />
-                      </Field>
-                      <Field label="Body Font Size">
-                        <TextInput
-                          type="number"
-                          value={draft.advanced.markdown_styles.body.font_size ?? 0}
-                          onChange={(e) =>
-                            updateMarkdownSection('body', 'font_size', Number(e.target.value))
-                          }
-                        />
-                      </Field>
-                      <Field label="Paragraph Spacing">
-                        <TextInput
-                          type="number"
-                          value={draft.advanced.markdown_styles.body.space_after ?? 0}
-                          onChange={(e) =>
-                            updateMarkdownSection('body', 'space_after', Number(e.target.value))
-                          }
-                        />
-                      </Field>
-                      <Field label="List Bullet Color">
-                        <TextInput
-                          type="color"
-                          value={draft.advanced.markdown_styles.lists.bullet_color ?? '#000000'}
-                          onChange={(e) =>
-                            updateMarkdownSection('lists', 'bullet_color', e.target.value)
-                          }
-                        />
-                      </Field>
-                      <Field label="List Text Color">
-                        <TextInput
-                          type="color"
-                          value={draft.advanced.markdown_styles.lists.text_color ?? '#000000'}
-                          onChange={(e) =>
-                            updateMarkdownSection('lists', 'text_color', e.target.value)
-                          }
-                        />
-                      </Field>
-                      <Field label="List Item Spacing">
-                        <TextInput
-                          type="number"
-                          value={draft.advanced.markdown_styles.lists.item_spacing ?? 0}
-                          onChange={(e) =>
-                            updateMarkdownSection('lists', 'item_spacing', Number(e.target.value))
-                          }
-                        />
-                      </Field>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <h4 className="mb-3 text-sm font-semibold text-slate-700">
-                      Blockquotes & Code
-                    </h4>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Quote Border">
-                        <TextInput
-                          type="color"
-                          value={
-                            draft.advanced.markdown_styles.blockquotes.border_color ?? '#000000'
-                          }
-                          onChange={(e) =>
-                            updateMarkdownSection('blockquotes', 'border_color', e.target.value)
-                          }
-                        />
-                      </Field>
-                      <Field label="Quote Surface">
-                        <TextInput
-                          type="color"
-                          value={
-                            draft.advanced.markdown_styles.blockquotes.background_color ??
-                            '#000000'
-                          }
-                          onChange={(e) =>
-                            updateMarkdownSection(
-                              'blockquotes',
-                              'background_color',
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </Field>
-                      <Field label="Quote Padding">
-                        <TextInput
-                          type="number"
-                          value={draft.advanced.markdown_styles.blockquotes.padding ?? 0}
-                          onChange={(e) =>
-                            updateMarkdownSection('blockquotes', 'padding', Number(e.target.value))
-                          }
-                        />
-                      </Field>
-                      <Field label="Code Surface">
-                        <TextInput
-                          type="color"
-                          value={
-                            draft.advanced.markdown_styles.code.background_color ?? '#000000'
-                          }
-                          onChange={(e) =>
-                            updateMarkdownSection('code', 'background_color', e.target.value)
-                          }
-                        />
-                      </Field>
-                      <Field label="Code Border">
-                        <TextInput
-                          type="color"
-                          value={draft.advanced.markdown_styles.code.border_color ?? '#000000'}
-                          onChange={(e) =>
-                            updateMarkdownSection('code', 'border_color', e.target.value)
-                          }
-                        />
-                      </Field>
-                      <Field label="Code Padding">
-                        <TextInput
-                          type="number"
-                          value={draft.advanced.markdown_styles.code.padding ?? 0}
-                          onChange={(e) =>
-                            updateMarkdownSection('code', 'padding', Number(e.target.value))
-                          }
-                        />
-                      </Field>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <h4 className="mb-3 text-sm font-semibold text-slate-700">Rules</h4>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Rule Color">
-                        <TextInput
-                          type="color"
-                          value={
-                            draft.advanced.markdown_styles.horizontal_rules.color ?? '#000000'
-                          }
-                          onChange={(e) =>
-                            updateMarkdownSection(
-                              'horizontal_rules',
-                              'color',
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </Field>
-                      <Field label="Rule Thickness">
-                        <TextInput
-                          type="number"
-                          step="0.1"
-                          value={
-                            draft.advanced.markdown_styles.horizontal_rules.thickness ?? 0
-                          }
-                          onChange={(e) =>
-                            updateMarkdownSection(
-                              'horizontal_rules',
-                              'thickness',
-                              Number(e.target.value),
-                            )
-                          }
-                        />
-                      </Field>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <h4 className="mb-3 text-sm font-semibold text-slate-700">Tables</h4>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Header Background">
-                        <TextInput
-                          type="color"
-                          value={
-                            draft.advanced.markdown_styles.tables.header_background_color ??
-                            '#000000'
-                          }
-                          onChange={(e) =>
-                            updateMarkdownSection(
-                              'tables',
-                              'header_background_color',
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </Field>
-                      <Field label="Header Text">
-                        <TextInput
-                          type="color"
-                          value={
-                            draft.advanced.markdown_styles.tables.header_text_color ?? '#000000'
-                          }
-                          onChange={(e) =>
-                            updateMarkdownSection(
-                              'tables',
-                              'header_text_color',
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </Field>
-                      <Field label="Row Background">
-                        <TextInput
-                          type="color"
-                          value={
-                            draft.advanced.markdown_styles.tables.row_background_color ??
-                            '#000000'
-                          }
-                          onChange={(e) =>
-                            updateMarkdownSection(
-                              'tables',
-                              'row_background_color',
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </Field>
-                      <Field label="Alternate Row Background">
-                        <TextInput
-                          type="color"
-                          value={
-                            draft.advanced.markdown_styles.tables
-                              .alternate_row_background_color ?? '#000000'
-                          }
-                          onChange={(e) =>
-                            updateMarkdownSection(
-                              'tables',
-                              'alternate_row_background_color',
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </Field>
-                      <Field label="Border Color">
-                        <TextInput
-                          type="color"
-                          value={
-                            draft.advanced.markdown_styles.tables.border_color ?? '#000000'
-                          }
-                          onChange={(e) =>
-                            updateMarkdownSection('tables', 'border_color', e.target.value)
-                          }
-                        />
-                      </Field>
-                      <Field label="Cell Padding">
-                        <TextInput
-                          type="number"
-                          value={draft.advanced.markdown_styles.tables.cell_padding ?? 0}
-                          onChange={(e) =>
-                            updateMarkdownSection(
-                              'tables',
-                              'cell_padding',
-                              Number(e.target.value),
-                            )
-                          }
-                        />
-                      </Field>
-                    </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Tables
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Header Background">
+                      <ColorInput
+                        value={
+                          draft.advanced.markdown_styles.tables.header_background_color ??
+                          '#000000'
+                        }
+                        onChange={(v) =>
+                          updateMarkdownSection('tables', 'header_background_color', v)
+                        }
+                      />
+                    </Field>
+                    <Field label="Header Text">
+                      <ColorInput
+                        value={
+                          draft.advanced.markdown_styles.tables.header_text_color ?? '#000000'
+                        }
+                        onChange={(v) =>
+                          updateMarkdownSection('tables', 'header_text_color', v)
+                        }
+                      />
+                    </Field>
+                    <Field label="Row Background">
+                      <ColorInput
+                        value={
+                          draft.advanced.markdown_styles.tables.row_background_color ?? '#000000'
+                        }
+                        onChange={(v) =>
+                          updateMarkdownSection('tables', 'row_background_color', v)
+                        }
+                      />
+                    </Field>
+                    <Field label="Alternate Row">
+                      <ColorInput
+                        value={
+                          draft.advanced.markdown_styles.tables.alternate_row_background_color ??
+                          '#000000'
+                        }
+                        onChange={(v) =>
+                          updateMarkdownSection('tables', 'alternate_row_background_color', v)
+                        }
+                      />
+                    </Field>
+                    <Field label="Border Color">
+                      <ColorInput
+                        value={
+                          draft.advanced.markdown_styles.tables.border_color ?? '#000000'
+                        }
+                        onChange={(v) =>
+                          updateMarkdownSection('tables', 'border_color', v)
+                        }
+                      />
+                    </Field>
+                    <Field label="Cell Padding">
+                      <TextInput
+                        type="number"
+                        value={draft.advanced.markdown_styles.tables.cell_padding ?? 0}
+                        onChange={(e) =>
+                          updateMarkdownSection('tables', 'cell_padding', Number(e.target.value))
+                        }
+                      />
+                    </Field>
                   </div>
                 </div>
               </div>
             </div>
           </CollapsibleSection>
 
+          {/* ── Actions ────────────────────────────────────────────── */}
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex h-12 items-center justify-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-5 text-sm font-medium text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting
-                ? isEditMode ? 'Updating…' : 'Saving…'
-                : isEditMode ? 'Update Template' : 'Save Template'}
+                ? isEditMode
+                  ? 'Updating…'
+                  : 'Saving…'
+                : isEditMode
+                  ? 'Update Template'
+                  : 'Save Template'}
             </button>
             {!isEditMode && (
               <button
@@ -1474,7 +1517,7 @@ export default function TemplateStudio({
                   setSelectedPaletteId(palettePresets[0].id)
                   setShowCustomPalette(false)
                 }}
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
               >
                 Reset
               </button>
@@ -1482,16 +1525,20 @@ export default function TemplateStudio({
           </div>
         </form>
 
-        <aside className="grid gap-6">
-          <section className="rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+        {/* ── Live Preview ───────────────────────────────────────── */}
+        <aside className="grid gap-4">
+          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div
-              className="overflow-hidden rounded-[28px] border border-slate-200 shadow-inner"
+              className="overflow-hidden rounded-xl border border-slate-200"
               style={{
                 backgroundColor: draft.palette.background_color,
                 color: draft.palette.secondary_color,
               }}
             >
-              <div className="border-b px-6 py-4" style={{ borderColor: draft.palette.muted_color }}>
+              <div
+                className="border-b px-6 py-4"
+                style={{ borderColor: draft.palette.muted_color }}
+              >
                 {draft.advanced.header.enabled && (
                   <div className="flex items-center gap-3">
                     {draft.advanced.header.show_logo && draft.logo && (
@@ -1534,8 +1581,7 @@ export default function TemplateStudio({
                 <p
                   style={{
                     color:
-                      draft.advanced.markdown_styles.body.color ??
-                      draft.palette.secondary_color,
+                      draft.advanced.markdown_styles.body.color ?? draft.palette.secondary_color,
                     fontSize: `${
                       draft.advanced.markdown_styles.body.font_size ??
                       draft.advanced.typography.font_size_body
@@ -1544,7 +1590,8 @@ export default function TemplateStudio({
                     fontFamily: draft.advanced.typography.font_family,
                   }}
                 >
-                  This preview shows how your saved template will present headings, body copy, tables, and branded page chrome inside generated PDFs.
+                  This preview shows how your saved template will present headings, body copy,
+                  tables, and branded page chrome inside generated PDFs.
                 </p>
                 <ul
                   className="space-y-2 pl-5"
@@ -1584,7 +1631,7 @@ export default function TemplateStudio({
                   </li>
                 </ul>
                 <blockquote
-                  className="rounded-2xl border-l-4 px-4 py-3"
+                  className="rounded-xl border-l-4 px-4 py-3"
                   style={{
                     borderColor:
                       draft.advanced.markdown_styles.blockquotes.border_color ??
@@ -1600,7 +1647,7 @@ export default function TemplateStudio({
                   Keep the visual language stable across every client-facing document.
                 </blockquote>
                 <pre
-                  className="overflow-x-auto rounded-2xl border px-4 py-3 text-sm"
+                  className="overflow-x-auto rounded-xl border px-4 py-3 text-sm"
                   style={{
                     borderColor:
                       draft.advanced.markdown_styles.code.border_color ??
@@ -1624,7 +1671,7 @@ export default function TemplateStudio({
                   }}
                 />
                 <div
-                  className="overflow-hidden rounded-2xl border"
+                  className="overflow-hidden rounded-xl border"
                   style={{
                     borderColor:
                       draft.advanced.markdown_styles.tables.border_color ??
@@ -1660,8 +1707,7 @@ export default function TemplateStudio({
                       <tr
                         style={{
                           backgroundColor:
-                            draft.advanced.markdown_styles.tables
-                              .alternate_row_background_color ??
+                            draft.advanced.markdown_styles.tables.alternate_row_background_color ??
                             draft.palette.surface_color,
                         }}
                       >
@@ -1673,7 +1719,10 @@ export default function TemplateStudio({
                 </div>
               </div>
 
-              <div className="border-t px-6 py-4 text-sm" style={{ borderColor: draft.palette.muted_color }}>
+              <div
+                className="border-t px-6 py-4 text-sm"
+                style={{ borderColor: draft.palette.muted_color }}
+              >
                 {draft.advanced.footer.enabled && (
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
@@ -1692,7 +1741,6 @@ export default function TemplateStudio({
               </div>
             </div>
           </section>
-
         </aside>
       </div>
     </div>
