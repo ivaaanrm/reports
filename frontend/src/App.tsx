@@ -101,7 +101,7 @@ export default function App() {
         <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sky-600">Reports</p>
         <span className="mx-3 h-3.5 w-px bg-slate-200" />
         <h1 className="font-['Iowan_Old_Style','Palatino_Linotype',serif] text-sm text-slate-900">
-          Enterprise PDF Builder
+          Template PDF Builder
         </h1>
         <span className="ml-auto text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
           {view === 'generate' ? 'Generate' : 'Template Studio'}
