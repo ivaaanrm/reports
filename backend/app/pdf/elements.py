@@ -390,20 +390,20 @@ def _preset_defaults(theme: Theme) -> dict:
         preset["body"]["space_after"] = 8.0
         preset["lists"]["item_spacing"] = 5.0
         preset["lists"]["left_indent"] = 18.0
-        preset["blockquotes"]["background_color"] = "#FFFFFF"
+        preset["blockquotes"]["background_color"] = theme.palette.surface_color
         preset["blockquotes"]["border_color"] = theme.palette.primary_color
         preset["blockquotes"]["accent_color"] = theme.palette.primary_color
         preset["blockquotes"]["padding"] = 10.0
         preset["blockquotes"]["left_indent"] = 0.0
         preset["blockquotes"]["panel"] = True
-        preset["code"]["background_color"] = "#FFFFFF"
+        preset["code"]["background_color"] = theme.palette.surface_color
         preset["code"]["border_color"] = theme.palette.muted_color
         preset["code"]["padding"] = 10.0
         preset["tables"]["cell_padding"] = 8.0
         preset["tables"]["header_background_color"] = theme.palette.primary_color
         preset["tables"]["header_text_color"] = "#FFFFFF"
-        preset["tables"]["row_background_color"] = "#FFFFFF"
-        preset["tables"]["alternate_row_background_color"] = "#F8FBFD"
+        preset["tables"]["row_background_color"] = theme.palette.surface_color
+        preset["tables"]["alternate_row_background_color"] = theme.palette.background_color
         preset["tables"]["border_color"] = theme.palette.muted_color
         preset["headings"]["h1"]["space_before"] = 14.0
         preset["headings"]["h2"]["space_before"] = 12.0
@@ -417,13 +417,13 @@ def _preset_defaults(theme: Theme) -> dict:
         preset["blockquotes"]["padding"] = 12.0
         preset["blockquotes"]["left_indent"] = 0.0
         preset["blockquotes"]["panel"] = True
-        preset["code"]["background_color"] = "#FFFDFB"
+        preset["code"]["background_color"] = theme.palette.surface_color
         preset["code"]["border_color"] = theme.palette.muted_color
         preset["code"]["padding"] = 12.0
         preset["code"]["panel"] = True
         preset["tables"]["header_background_color"] = theme.palette.primary_color
         preset["tables"]["header_text_color"] = "#FFFFFF"
-        preset["tables"]["row_background_color"] = "#FFFDFB"
+        preset["tables"]["row_background_color"] = theme.palette.surface_color
         preset["tables"]["alternate_row_background_color"] = theme.palette.surface_color
         preset["tables"]["border_color"] = theme.palette.muted_color
         preset["tables"]["cell_padding"] = 8.0
@@ -437,6 +437,10 @@ def _preset_defaults(theme: Theme) -> dict:
         preset["headings"]["h2"]["space_after"] = 8.0
         preset["headings"]["h3"]["space_before"] = 12.0
         preset["headings"]["h3"]["space_after"] = 6.0
+
+    if theme.markdown_preset != "default-dark":
+        if _hex_luminance(theme.palette.background_color) < 0.5:
+            preset["code"]["text_color"] = "#E2E8F0"
 
     return preset
 

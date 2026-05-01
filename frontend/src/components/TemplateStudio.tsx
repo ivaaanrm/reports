@@ -35,8 +35,26 @@ type StylePreset = {
   footer: HeaderFooterSettings
 }
 
+type ColorPalette = {
+  id: 'ocean' | 'midnight' | 'steel' | 'ember'
+  name: string
+  description: string
+  palette: PaletteSettings
+}
+
+type VisualStyle = {
+  id: 'modern' | 'professional' | 'expressive'
+  name: string
+  description: string
+  font_family: string
+  markdown_preset: MarkdownPreset
+  line_spacing: number
+  font_size_heading: number
+}
+
 const fontOptions = ['Helvetica', 'Times-Roman', 'Courier']
 const alignOptions: Alignment[] = ['left', 'center', 'right']
+
 const stylePresets: StylePreset[] = [
   {
     id: 'default-light',
@@ -232,6 +250,126 @@ const stylePresets: StylePreset[] = [
   },
 ]
 
+const colorPalettes: ColorPalette[] = [
+  {
+    id: 'ocean',
+    name: 'Ocean',
+    description: 'Blues and teal on a light background — calm and professional.',
+    palette: {
+      primary_color: '#173B63',
+      secondary_color: '#4B5B6A',
+      accent_color: '#1E847F',
+      background_color: '#F6F8FC',
+      surface_color: '#EAF0F6',
+      muted_color: '#C9D5E3',
+    },
+  },
+  {
+    id: 'midnight',
+    name: 'Midnight',
+    description: 'Dark navy background with cool teal highlights — bold contrast.',
+    palette: {
+      primary_color: '#E6EEF8',
+      secondary_color: '#B8C7D9',
+      accent_color: '#4FD1C5',
+      background_color: '#0F1724',
+      surface_color: '#162131',
+      muted_color: '#2E415A',
+    },
+  },
+  {
+    id: 'steel',
+    name: 'Steel',
+    description: 'Deep navy with an off-white background — sharp and authoritative.',
+    palette: {
+      primary_color: '#0F2942',
+      secondary_color: '#4A5A67',
+      accent_color: '#2E6A8E',
+      background_color: '#F3F6F9',
+      surface_color: '#FFFFFF',
+      muted_color: '#D6E0E8',
+    },
+  },
+  {
+    id: 'ember',
+    name: 'Ember',
+    description: 'Purple and warm orange on a cream background — vivid and creative.',
+    palette: {
+      primary_color: '#6B2C91',
+      secondary_color: '#4F435B',
+      accent_color: '#F97360',
+      background_color: '#FFF8F4',
+      surface_color: '#F8E7DE',
+      muted_color: '#E8C9BC',
+    },
+  },
+]
+
+const visualStyles: VisualStyle[] = [
+  {
+    id: 'modern',
+    name: 'Modern',
+    description: 'Generous spacing, soft panels, and calm rhythm.',
+    font_family: 'Helvetica',
+    markdown_preset: 'default-light',
+    line_spacing: 1.42,
+    font_size_heading: 22,
+  },
+  {
+    id: 'professional',
+    name: 'Professional',
+    description: 'Compact and formal with crisp hierarchy and sharp lines.',
+    font_family: 'Times-Roman',
+    markdown_preset: 'modern-corporate',
+    line_spacing: 1.34,
+    font_size_heading: 22,
+  },
+  {
+    id: 'expressive',
+    name: 'Expressive',
+    description: 'Bold callouts, dynamic spacing, and a creative edge.',
+    font_family: 'Helvetica',
+    markdown_preset: 'creative-studio',
+    line_spacing: 1.48,
+    font_size_heading: 24,
+  },
+]
+
+// Maps preset id → palette id / style id for selected-state derivation
+const presetToPaletteId: Record<MarkdownPreset, ColorPalette['id']> = {
+  'default-light': 'ocean',
+  'default-dark': 'midnight',
+  'modern-corporate': 'steel',
+  'creative-studio': 'ember',
+}
+const presetToStyleId: Record<MarkdownPreset, VisualStyle['id']> = {
+  'default-light': 'modern',
+  'default-dark': 'modern',
+  'modern-corporate': 'professional',
+  'creative-studio': 'expressive',
+}
+
+const fontCssMap: Record<string, string> = {
+  'Helvetica': 'system-ui, -apple-system, sans-serif',
+  'Times-Roman': 'Georgia, "Times New Roman", serif',
+  'Courier': '"Courier New", Courier, monospace',
+}
+
+// ─── Pure helpers ─────────────────────────────────────────────────────────────
+
+function resolveMarkdownPreset(
+  styleId: VisualStyle['id'] | null,
+  isDark: boolean,
+): MarkdownPreset {
+  if (isDark) return 'default-dark'
+  switch (styleId) {
+    case 'modern':       return 'default-light'
+    case 'professional': return 'modern-corporate'
+    case 'expressive':   return 'creative-studio'
+    default:             return 'default-light'
+  }
+}
+
 function createPresetStyles(
   preset: MarkdownPreset,
   palette: PaletteSettings,
@@ -321,7 +459,7 @@ function createPresetStyles(
     base.blockquotes.background_color = palette.surface_color
     base.blockquotes.left_indent = 0
     base.blockquotes.padding = 12
-    base.code.background_color = '#FFFFFF'
+    base.code.background_color = palette.surface_color
     base.code.border_color = palette.muted_color
     base.code.padding = 12
     base.horizontal_rules.thickness = 0.5
@@ -329,8 +467,8 @@ function createPresetStyles(
     base.horizontal_rules.spacing_after = 10
     base.tables.header_background_color = palette.primary_color
     base.tables.header_text_color = '#FFFFFF'
-    base.tables.row_background_color = '#FFFFFF'
-    base.tables.alternate_row_background_color = palette.surface_color
+    base.tables.row_background_color = palette.surface_color
+    base.tables.alternate_row_background_color = palette.background_color
     base.tables.border_color = palette.muted_color
     base.tables.cell_padding = 8
   }
@@ -369,17 +507,17 @@ function createPresetStyles(
     base.body.space_after = 8
     base.lists.item_spacing = 5
     base.blockquotes.border_color = palette.primary_color
-    base.blockquotes.background_color = '#FFFFFF'
+    base.blockquotes.background_color = palette.surface_color
     base.blockquotes.left_indent = 0
     base.blockquotes.padding = 10
-    base.code.background_color = '#FFFFFF'
+    base.code.background_color = palette.surface_color
     base.code.border_color = palette.muted_color
     base.code.padding = 10
     base.horizontal_rules.thickness = 0.5
     base.tables.header_background_color = palette.primary_color
     base.tables.header_text_color = '#FFFFFF'
-    base.tables.row_background_color = '#FFFFFF'
-    base.tables.alternate_row_background_color = '#F8FBFD'
+    base.tables.row_background_color = palette.surface_color
+    base.tables.alternate_row_background_color = palette.background_color
     base.tables.border_color = palette.muted_color
     base.tables.cell_padding = 8
     base.headings.h1.space_before = 14
@@ -400,7 +538,7 @@ function createPresetStyles(
     base.blockquotes.background_color = palette.surface_color
     base.blockquotes.left_indent = 0
     base.blockquotes.padding = 12
-    base.code.background_color = '#FFFDFB'
+    base.code.background_color = palette.surface_color
     base.code.border_color = palette.muted_color
     base.code.padding = 12
     base.horizontal_rules.thickness = 0.5
@@ -408,8 +546,8 @@ function createPresetStyles(
     base.horizontal_rules.spacing_after = 10
     base.tables.header_background_color = palette.primary_color
     base.tables.header_text_color = '#FFFFFF'
-    base.tables.row_background_color = '#FFFDFB'
-    base.tables.alternate_row_background_color = palette.surface_color
+    base.tables.row_background_color = palette.surface_color
+    base.tables.alternate_row_background_color = palette.background_color
     base.tables.border_color = palette.muted_color
     base.tables.cell_padding = 8
   }
@@ -661,7 +799,97 @@ function PresetCard({
   )
 }
 
+function PaletteCard({
+  selected,
+  palette,
+  onClick,
+}: {
+  selected: boolean
+  palette: ColorPalette
+  onClick: () => void
+}) {
+  const swatchKeys: (keyof PaletteSettings)[] = [
+    'primary_color',
+    'secondary_color',
+    'accent_color',
+    'background_color',
+    'surface_color',
+    'muted_color',
+  ]
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl border p-4 text-left transition ${
+        selected
+          ? 'border-sky-200 bg-sky-50 ring-2 ring-sky-500'
+          : 'border-slate-200 bg-white ring-1 ring-slate-200 hover:ring-slate-300'
+      }`}
+    >
+      <div className="flex gap-1.5">
+        {swatchKeys.map((key) => (
+          <span
+            key={key}
+            className="h-5 w-5 rounded-full border border-white shadow-sm"
+            style={{ backgroundColor: palette.palette[key] }}
+          />
+        ))}
+      </div>
+      <h3 className="mt-3 text-sm font-medium text-slate-700">{palette.name}</h3>
+      <p className="mt-0.5 text-xs leading-5 text-slate-500">{palette.description}</p>
+    </button>
+  )
+}
+
+function StyleCard({
+  selected,
+  style,
+  onClick,
+}: {
+  selected: boolean
+  style: VisualStyle
+  onClick: () => void
+}) {
+  const cssFontFamily = fontCssMap[style.font_family] ?? style.font_family
+  const tagline =
+    style.markdown_preset === 'default-light'
+      ? 'Generous spacing · soft panels'
+      : style.markdown_preset === 'modern-corporate'
+        ? 'Compact · sharp lines'
+        : 'Bold callouts · dynamic spacing'
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl border p-4 text-left transition ${
+        selected
+          ? 'border-sky-200 bg-sky-50 ring-2 ring-sky-500'
+          : 'border-slate-200 bg-white ring-1 ring-slate-200 hover:ring-slate-300'
+      }`}
+    >
+      <p
+        className="text-base font-semibold text-slate-800 leading-tight"
+        style={{ fontFamily: cssFontFamily }}
+      >
+        {style.font_family}
+      </p>
+      <p className="mt-1 text-xs text-slate-400 tracking-wide">{tagline}</p>
+      <h3 className="mt-3 text-sm font-medium text-slate-700">{style.name}</h3>
+      <p className="mt-0.5 text-xs leading-5 text-slate-500">{style.description}</p>
+    </button>
+  )
+}
+
 // ─── Section icons ────────────────────────────────────────────────────────────
+
+function IconId() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path fillRule="evenodd" d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15Zm4.125 3a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-3.873 8.703a4.126 4.126 0 0 1 7.746 0 .75.75 0 0 1-.351.92 7.47 7.47 0 0 1-3.522.877 7.47 7.47 0 0 1-3.522-.877.75.75 0 0 1-.351-.92ZM15 8.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15ZM14.25 12a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 0 1.5H15a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15Z" clipRule="evenodd" />
+    </svg>
+  )
+}
 
 function IconBrand() {
   return (
@@ -684,6 +912,14 @@ function IconText() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
       <path fillRule="evenodd" d="M2.625 6.75a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0A.75.75 0 0 1 8.25 6h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75ZM2.625 12a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0ZM7.5 12a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12A.75.75 0 0 1 7.5 12Zm-4.875 5.25a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function IconBrush() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path fillRule="evenodd" d="M20.599 1.5c-.376 0-.743.111-1.055.32l-5.08 3.385a18.747 18.747 0 0 0-3.471 2.987 10.04 10.04 0 0 1 4.815 4.815 18.748 18.748 0 0 0 2.987-3.472l3.386-5.079A1.902 1.902 0 0 0 20.599 1.5Zm-8.3 14.025a18.76 18.76 0 0 0 1.896-1.207 8.026 8.026 0 0 0-4.513-4.513A18.75 18.75 0 0 0 8.475 11.7l-.278.5a5.26 5.26 0 0 1 3.601 3.602l.502-.278ZM6.75 13.5A3.75 3.75 0 0 0 3 17.25a1.5 1.5 0 0 1-1.601 1.497.75.75 0 0 0-.7 1.143 5.25 5.25 0 0 0 9.8-2.64A3.75 3.75 0 0 0 6.75 13.5Z" clipRule="evenodd" />
     </svg>
   )
 }
@@ -729,6 +965,16 @@ export default function TemplateStudio({
   const [slugTouched, setSlugTouched] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  const [selectedPaletteId, setSelectedPaletteId] = useState<ColorPalette['id'] | null>(() => {
+    const initial = isEditMode ? createDraftFromTheme(initialTheme) : createInitialDraft()
+    return colorPalettes.find((p) => p.palette.primary_color === initial.palette.primary_color)?.id ?? null
+  })
+
+  const [selectedStyleId, setSelectedStyleId] = useState<VisualStyle['id'] | null>(() => {
+    const initial = isEditMode ? createDraftFromTheme(initialTheme) : createInitialDraft()
+    return presetToStyleId[initial.markdown_preset] ?? null
+  })
 
   function updateField<K extends keyof TemplateDraft>(key: K, value: TemplateDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }))
@@ -835,7 +1081,9 @@ export default function TemplateStudio({
     }))
   }
 
-  function applyStylePreset(preset: StylePreset) {
+  function applyQuickPreset(preset: StylePreset) {
+    setSelectedPaletteId(presetToPaletteId[preset.id])
+    setSelectedStyleId(presetToStyleId[preset.id])
     setDraft((current) => ({
       ...current,
       palette: preset.palette,
@@ -853,6 +1101,46 @@ export default function TemplateStudio({
         }),
       },
     }))
+  }
+
+  function applyColorPalette(cp: ColorPalette) {
+    setSelectedPaletteId(cp.id)
+    const isDark = cp.id === 'midnight'
+    const resolvedPreset = resolveMarkdownPreset(selectedStyleId, isDark)
+    setDraft((current) => ({
+      ...current,
+      palette: cp.palette,
+      markdown_preset: resolvedPreset,
+      advanced: {
+        ...current.advanced,
+        markdown_styles: createPresetStyles(resolvedPreset, cp.palette, current.advanced),
+      },
+    }))
+  }
+
+  function applyVisualStyle(vs: VisualStyle) {
+    setSelectedStyleId(vs.id)
+    const isDark = selectedPaletteId === 'midnight'
+    const resolvedPreset = resolveMarkdownPreset(vs.id, isDark)
+    setDraft((current) => {
+      const newTypography = {
+        ...current.advanced.typography,
+        font_family: vs.font_family,
+        line_spacing: vs.line_spacing,
+        font_size_heading: vs.font_size_heading,
+      }
+      return {
+        ...current,
+        markdown_preset: resolvedPreset,
+        advanced: {
+          ...current.advanced,
+          typography: newTypography,
+          markdown_styles: createPresetStyles(resolvedPreset, current.palette, {
+            typography: newTypography,
+          }),
+        },
+      }
+    })
   }
 
   async function handleLogoChange(file: File | null) {
@@ -923,7 +1211,7 @@ export default function TemplateStudio({
         </h1>
         {!isEditMode && (
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-            Keep the primary decisions simple, and tuck layout, typography, page chrome, and detailed overrides into compact advanced settings.
+            Pick a palette and style to personalise your report. Combine them freely, then save.
           </p>
         )}
       </div>
@@ -942,11 +1230,11 @@ export default function TemplateStudio({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_360px]">
         <form className="grid gap-4" onSubmit={handleSubmit}>
 
-          {/* ── Brand ──────────────────────────────────────────────── */}
+          {/* ── 1. Template Name ──────────────────────────────────── */}
           <CollapsibleSection
-            title="Brand"
-            subtitle="Name, slug, company identity and logo."
-            icon={<IconBrand />}
+            title="Template Name"
+            subtitle="Name and unique slug for this template."
+            icon={<IconId />}
             defaultOpen
           >
             <div className="grid gap-4 md:grid-cols-2">
@@ -979,6 +1267,131 @@ export default function TemplateStudio({
                   }}
                 />
               </Field>
+            </div>
+          </CollapsibleSection>
+
+          {/* ── 2. Presets ─────────────────────────────────────────── */}
+          <CollapsibleSection
+            title="Presets"
+            subtitle="Quick-start: picks a palette, style, and typography all at once."
+            icon={<IconText />}
+            defaultOpen
+          >
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {stylePresets.map((preset) => (
+                <PresetCard
+                  key={preset.id}
+                  selected={
+                    selectedPaletteId === presetToPaletteId[preset.id] &&
+                    selectedStyleId === presetToStyleId[preset.id]
+                  }
+                  title={preset.name}
+                  description={preset.description}
+                  swatches={[
+                    preset.palette.primary_color,
+                    preset.palette.secondary_color,
+                    preset.palette.accent_color,
+                    preset.palette.surface_color,
+                  ]}
+                  onClick={() => applyQuickPreset(preset)}
+                />
+              ))}
+            </div>
+          </CollapsibleSection>
+
+          {/* ── 3. Color Palettes ─────────────────────────────────── */}
+          <CollapsibleSection
+            title="Color Palettes"
+            subtitle="Choose a named color set — swaps all 6 colors at once."
+            icon={<IconPalette />}
+            defaultOpen
+          >
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {colorPalettes.map((cp) => (
+                <PaletteCard
+                  key={cp.id}
+                  selected={selectedPaletteId === cp.id}
+                  palette={cp}
+                  onClick={() => applyColorPalette(cp)}
+                />
+              ))}
+            </div>
+            <details className="mt-4">
+              <summary className="cursor-pointer select-none text-xs text-slate-400 hover:text-slate-600">
+                Fine-tune individual colors
+              </summary>
+              <div className="mt-3 grid gap-4 rounded-xl bg-slate-50 p-4 md:grid-cols-2 lg:grid-cols-3">
+                <Field label="Primary">
+                  <ColorInput
+                    value={draft.palette.primary_color}
+                    onChange={(v) => updatePalette('primary_color', v)}
+                  />
+                </Field>
+                <Field label="Secondary">
+                  <ColorInput
+                    value={draft.palette.secondary_color}
+                    onChange={(v) => updatePalette('secondary_color', v)}
+                  />
+                </Field>
+                <Field label="Accent">
+                  <ColorInput
+                    value={draft.palette.accent_color}
+                    onChange={(v) => updatePalette('accent_color', v)}
+                  />
+                </Field>
+                <Field label="Background">
+                  <ColorInput
+                    value={draft.palette.background_color}
+                    onChange={(v) => updatePalette('background_color', v)}
+                  />
+                </Field>
+                <Field label="Surface">
+                  <ColorInput
+                    value={draft.palette.surface_color}
+                    onChange={(v) => updatePalette('surface_color', v)}
+                  />
+                </Field>
+                <Field label="Muted">
+                  <ColorInput
+                    value={draft.palette.muted_color}
+                    onChange={(v) => updatePalette('muted_color', v)}
+                  />
+                </Field>
+              </div>
+            </details>
+          </CollapsibleSection>
+
+          {/* ── 4. Style ───────────────────────────────────────────── */}
+          <CollapsibleSection
+            title="Style"
+            subtitle="Sets typography and rendering — combine freely with any palette."
+            icon={<IconBrush />}
+            defaultOpen
+          >
+            <div className="grid gap-3 md:grid-cols-3">
+              {visualStyles.map((vs) => (
+                <StyleCard
+                  key={vs.id}
+                  selected={selectedStyleId === vs.id}
+                  style={vs}
+                  onClick={() => applyVisualStyle(vs)}
+                />
+              ))}
+            </div>
+            {selectedPaletteId === 'midnight' && (
+              <p className="mt-3 text-xs text-slate-400">
+                Midnight palette detected — code blocks will use dark-mode rendering automatically.
+              </p>
+            )}
+          </CollapsibleSection>
+
+          {/* ── 5. Brand ───────────────────────────────────────────── */}
+          <CollapsibleSection
+            title="Brand"
+            subtitle="Company name, description, and logo."
+            icon={<IconBrand />}
+          >
+            <div className="grid gap-4 md:grid-cols-2">
               <Field label="Company Name">
                 <TextInput
                   value={draft.company_name}
@@ -1053,78 +1466,7 @@ export default function TemplateStudio({
             </div>
           </CollapsibleSection>
 
-          {/* ── Palette ────────────────────────────────────────────── */}
-          <CollapsibleSection
-            title="Palette"
-            subtitle="Fine-tune colors after choosing the main style preset."
-            icon={<IconPalette />}
-          >
-            <div className="grid gap-4 rounded-xl bg-slate-50 p-4 md:grid-cols-2 lg:grid-cols-3">
-              <Field label="Primary">
-                <ColorInput
-                  value={draft.palette.primary_color}
-                  onChange={(v) => updatePalette('primary_color', v)}
-                />
-              </Field>
-              <Field label="Secondary">
-                <ColorInput
-                  value={draft.palette.secondary_color}
-                  onChange={(v) => updatePalette('secondary_color', v)}
-                />
-              </Field>
-              <Field label="Accent">
-                <ColorInput
-                  value={draft.palette.accent_color}
-                  onChange={(v) => updatePalette('accent_color', v)}
-                />
-              </Field>
-              <Field label="Background">
-                <ColorInput
-                  value={draft.palette.background_color}
-                  onChange={(v) => updatePalette('background_color', v)}
-                />
-              </Field>
-              <Field label="Surface">
-                <ColorInput
-                  value={draft.palette.surface_color}
-                  onChange={(v) => updatePalette('surface_color', v)}
-                />
-              </Field>
-              <Field label="Muted">
-                <ColorInput
-                  value={draft.palette.muted_color}
-                  onChange={(v) => updatePalette('muted_color', v)}
-                />
-              </Field>
-            </div>
-          </CollapsibleSection>
-
-          {/* ── Style Presets ───────────────────────────────────── */}
-          <CollapsibleSection
-            title="Style Presets"
-            subtitle="Choose the main visual direction first. This drives the overall report style."
-            icon={<IconText />}
-          >
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {stylePresets.map((preset) => (
-                <PresetCard
-                  key={preset.id}
-                  selected={draft.markdown_preset === preset.id}
-                  title={preset.name}
-                  description={preset.description}
-                  swatches={[
-                    preset.palette.primary_color,
-                    preset.palette.secondary_color,
-                    preset.palette.accent_color,
-                    preset.palette.surface_color,
-                  ]}
-                  onClick={() => applyStylePreset(preset)}
-                />
-              ))}
-            </div>
-          </CollapsibleSection>
-
-          {/* ── Advanced ───────────────────────────────────────────── */}
+          {/* ── 6. Advanced ────────────────────────────────────────── */}
           <CollapsibleSection
             title="Advanced"
             subtitle="Typography, layout, page chrome, and markdown overrides."
@@ -1643,6 +1985,8 @@ export default function TemplateStudio({
                 type="button"
                 onClick={() => {
                   setDraft(createInitialDraft())
+                  setSelectedPaletteId('ocean')
+                  setSelectedStyleId('modern')
                   setSlugTouched(false)
                   setSuccess(null)
                   setError(null)
@@ -1703,7 +2047,7 @@ export default function TemplateStudio({
                       draft.advanced.markdown_styles.headings.h1.font_size ??
                       draft.advanced.typography.font_size_heading
                     }px`,
-                    fontFamily: draft.advanced.typography.font_family,
+                    fontFamily: fontCssMap[draft.advanced.typography.font_family] ?? draft.advanced.typography.font_family,
                   }}
                 >
                   Executive Summary
@@ -1717,7 +2061,7 @@ export default function TemplateStudio({
                       draft.advanced.typography.font_size_body
                     }px`,
                     lineHeight: draft.advanced.typography.line_spacing,
-                    fontFamily: draft.advanced.typography.font_family,
+                    fontFamily: fontCssMap[draft.advanced.typography.font_family] ?? draft.advanced.typography.font_family,
                   }}
                 >
                   This preview shows how your saved template will present headings, body copy,
