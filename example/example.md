@@ -1,3 +1,39 @@
+## Alerts
+
+> [!NOTE]
+> Useful information that users should know, even when skimming.
+
+> [!TIP]
+> Helpful advice for doing things better or more easily.
+
+> [!IMPORTANT]
+> Key information users need to know to achieve their goal.
+
+> [!WARNING]
+> Urgent info that needs immediate user attention to avoid problems.
+
+> [!CAUTION]
+> Advises about risks or negative outcomes of certain actions.
+
+> [!NOTE]
+> Alerts support **bold**, *italic*, and `inline code`.
+> They can span multiple lines.
+>
+> Even multiple paragraphs are supported.
+
+---
+
+## Footnotes
+
+Here is a sentence with a footnote.[^ex1]
+
+Another sentence references a second footnote.[^ex2]
+
+[^ex1]: This is the first footnote content.
+[^ex2]: This is a longer footnote. It can contain **formatted** text and span multiple sentences.
+
+---
+
 # Heading Level 1
 
 ## Heading Level 2

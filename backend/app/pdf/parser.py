@@ -1,8 +1,9 @@
 import mistune
+from mistune.plugins.footnotes import footnotes
 from mistune.plugins.table import table
 from mistune.plugins.task_lists import task_lists
 
-_md = mistune.Markdown(renderer=None, plugins=[table, task_lists])
+_md = mistune.Markdown(renderer=None, plugins=[table, task_lists, footnotes])
 
 
 def parse(text: str) -> list[dict]:

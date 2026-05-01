@@ -1,3 +1,4 @@
+import re
 from copy import deepcopy
 from html import escape
 
@@ -186,6 +187,49 @@ FONT_VARIANTS = {
     "Times-Roman": {"regular": "Times-Roman", "bold": "Times-Bold"},
     "Courier": {"regular": "Courier", "bold": "Courier-Bold"},
 }
+
+_ALERT_CONFIG: dict[str, dict[str, str]] = {
+    "NOTE":      {"label": "Note",      "color": "#0284C7", "bg": "#EFF6FF"},
+    "TIP":       {"label": "Tip",       "color": "#16A34A", "bg": "#F0FDF4"},
+    "IMPORTANT": {"label": "Important", "color": "#7C3AED", "bg": "#F5F3FF"},
+    "WARNING":   {"label": "Warning",   "color": "#CA8A04", "bg": "#FEFCE8"},
+    "CAUTION":   {"label": "Caution",   "color": "#DC2626", "bg": "#FEF2F2"},
+}
+_ALERT_RE = re.compile(r"^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]$")
+
+
+def _detect_alert(token: dict) -> tuple[str | None, list[dict]]:
+    """Returns (alert_type, remaining_children) when a blockquote starts with [!TYPE]."""
+    children = token.get("children") or []
+    if not children:
+        return None, children
+
+    first = children[0]
+    if first.get("type") not in {"paragraph", "block_text"}:
+        return None, children
+
+    first_children = first.get("children") or []
+    raw_parts: list[str] = []
+    split_at = len(first_children)
+    for i, c in enumerate(first_children):
+        if c.get("type") in {"softbreak", "softline_break", "line_break"}:
+            split_at = i
+            break
+        raw_parts.append(c.get("raw", ""))
+
+    m = _ALERT_RE.match("".join(raw_parts).strip())
+    if not m:
+        return None, children
+
+    alert_type = m.group(1)
+    after_marker = first_children[split_at + 1:]
+    if after_marker:
+        new_first = {**first, "children": after_marker}
+        new_children: list[dict] = [new_first] + list(children[1:])
+    else:
+        new_children = list(children[1:])
+
+    return alert_type, new_children
 
 
 def _font_name(font_family: str, *, bold: bool = False, monospace: bool = False) -> str:
@@ -532,6 +576,9 @@ def _inline_text(children: list[dict] | None) -> str:
             parts.append(inner or raw)
         elif token_type in {"softbreak", "softline_break", "line_break"}:
             parts.append("<br/>")
+        elif token_type == "footnote_ref":
+            idx = child.get("attrs", {}).get("index", "?")
+            parts.append(f"<super>[{idx}]</super>")
         else:
             parts.append(raw or inner)
 
@@ -742,7 +789,108 @@ def _build_code_flowables(token: dict, styles: dict, meta: dict) -> list[Flowabl
     return [code_block, Spacer(1, styles["body"].spaceAfter)]
 
 
+def _build_alert_flowables(alert_type: str, children: list[dict], styles: dict, meta: dict) -> list[Flowable]:
+    cfg = _ALERT_CONFIG[alert_type]
+    color = cfg["color"]
+    bg = cfg["bg"]
+    padding = meta["blockquotes"]["padding"]
+
+    label_style = ParagraphStyle(
+        f"alert_{alert_type.lower()}",
+        parent=styles["body"],
+        fontName=_font_name(styles["body"].fontName, bold=True),
+        fontSize=styles["body"].fontSize,
+        textColor=colors.HexColor(color),
+        spaceAfter=4,
+        spaceBefore=0,
+    )
+
+    content: list[Flowable] = [Paragraph(cfg["label"], label_style)]
+
+    for child in children:
+        child_type = child.get("type", "")
+        if child_type in {"paragraph", "block_text"}:
+            text = _inline_text(child.get("children") or [])
+            if text:
+                content.append(Paragraph(text, styles["blockquote"]))
+        elif child_type in {"heading", "atx_heading"}:
+            text = _inline_text(child.get("children") or [])
+            if text:
+                content.append(Paragraph(text, styles["blockquote_heading"]))
+        elif child_type in {"list", "bullet_list", "ordered_list"}:
+            nested = _build_list_flowable(child, styles, meta)
+            if nested is not None:
+                content.append(nested)
+        elif child_type in {"block_code", "fenced_code"}:
+            content.extend(_build_code_flowables(child, styles, meta))
+        elif child_type == "block_quote":
+            content.extend(_build_blockquote_flowables(child, styles, meta))
+        elif child_type == "blank_line":
+            content.append(Spacer(1, 4))
+
+    while content and isinstance(content[-1], Spacer):
+        content.pop()
+
+    if len(content) == 1:
+        return []
+
+    panel = Table([[Spacer(1, 1), content]], colWidths=[4, None], hAlign="LEFT")
+    panel.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor(color)),
+        ("BACKGROUND", (1, 0), (1, -1), colors.HexColor(bg)),
+        ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor(color)),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (0, -1), 0),
+        ("RIGHTPADDING", (0, 0), (0, -1), 0),
+        ("TOPPADDING", (0, 0), (0, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (0, -1), 0),
+        ("LEFTPADDING", (1, 0), (1, -1), padding),
+        ("RIGHTPADDING", (1, 0), (1, -1), padding),
+        ("TOPPADDING", (1, 0), (1, -1), padding),
+        ("BOTTOMPADDING", (1, 0), (1, -1), padding),
+    ]))
+
+    return [panel, Spacer(1, styles["body"].spaceAfter)]
+
+
+def _build_footnotes_flowables(token: dict, styles: dict, meta: dict) -> list[Flowable]:
+    hr = meta["horizontal_rules"]
+    body = styles["body"]
+
+    footnote_style = ParagraphStyle(
+        "footnote_item",
+        parent=body,
+        fontSize=max(body.fontSize - 2, 8),
+        spaceAfter=3,
+        spaceBefore=0,
+    )
+
+    flowables: list[Flowable] = [
+        Spacer(1, hr["spacing_before"]),
+        HRFlowable(width="100%", color=colors.HexColor(hr["color"]), thickness=hr["thickness"]),
+        Spacer(1, 6),
+    ]
+
+    for item in token.get("children") or []:
+        if item.get("type") != "footnote_item":
+            continue
+        idx = item.get("attrs", {}).get("index", "?")
+        text_parts: list[str] = []
+        for child in item.get("children") or []:
+            if child.get("type") in {"paragraph", "block_text"}:
+                text_parts.append(_inline_text(child.get("children") or []))
+        text = " ".join(t for t in text_parts if t)
+        if text:
+            flowables.append(Paragraph(f"[{idx}] {text}", footnote_style))
+
+    return flowables
+
+
 def _build_blockquote_flowables(token: dict, styles: dict, meta: dict) -> list[Flowable]:
+    alert_type, alert_children = _detect_alert(token)
+    if alert_type is not None:
+        return _build_alert_flowables(alert_type, alert_children, styles, meta)
+
     content: list[Flowable] = []
 
     for child in token.get("children") or []:
@@ -867,6 +1015,9 @@ def _build_token_flowables(tokens: list[dict], styles: dict) -> list[Flowable]:
                 )
             )
             flowables.append(Spacer(1, hr["spacing_after"]))
+
+        elif token_type == "footnotes":
+            flowables.extend(_build_footnotes_flowables(token, styles, meta))
 
         elif token_type == "blank_line":
             flowables.append(Spacer(1, 6))
